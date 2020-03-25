@@ -1,0 +1,120 @@
+<sect1 id="configuration-file" xreflabel="configuration file">
+  <indexterm>
+    <primary>repmgr.conf</primary>
+  </indexterm>
+
+  <indexterm>
+    <primary>configuration</primary>
+    <secondary>repmgr.conf</secondary>
+  </indexterm>
+
+  <title>Configuration file</title>
+
+  <para>
+    <application>repmgr</application> and <application>repmgrd</application>
+    use a common configuration file, by default called
+    <filename>repmgr.conf</filename> (although any name can be used if explicitly specified).
+    <filename>repmgr.conf</filename> must contain a number of required parameters, including
+    the database connection string for the local node and the location
+    of its data directory; other values will be inferred from defaults if
+    not explicitly supplied. See section <xref linkend="configuration-file-settings">
+    for more details.
+  </para>
+
+  <sect2 id="configuration-file-format" xreflabel="configuration file format">
+
+    <indexterm>
+      <primary>repmgr.conf</primary>
+      <secondary>format</secondary>
+    </indexterm>
+
+    <title>Configuration file format</title>
+
+    <para>
+      <filename>repmgr.conf</filename> is a plain text file with one parameter/value
+      combination per line.
+    </para>
+    <para>
+      Whitespace is insignificant (except within a quoted parameter value) and blank lines are ignored.
+      Hash marks (<literal>#</literal>) designate the remainder of the line as a comment.
+      Parameter values that are not simple identifiers or numbers should be single-quoted.
+      Note that single quote cannot be embedded in a parameter value.
+    </para>
+    <important>
+      <para>
+        &repmgr; will interpret double-quotes as being part of a string value; only use single quotes
+        to quote parameter values.
+      </para>
+    </important>
+
+    <para>
+      Example of a valid <filename>repmgr.conf</filename> file:
+      <programlisting>
+# repmgr.conf
+
+node_id=1
+node_name= node1
+conninfo ='host=node1 dbname=repmgr user=repmgr connect_timeout=2'
+data_directory = /var/lib/pgsql/11/data</programlisting>
+
+    </para>
+  </sect2>
+
+
+
+  <sect2 id="configuration-file-location" xreflabel="configuration file location">
+  <indexterm>
+    <primary>repmgr.conf</primary>
+    <secondary>location</secondary>
+  </indexterm>
+
+  <title>Configuration file location</title>
+
+  <para>
+   The configuration file will be searched for in the following locations:
+   <itemizedlist spacing="compact" mark="bullet">
+    <listitem>
+     <para>a configuration file specified by the <literal>-f/--config-file</literal> command line option</para>
+    </listitem>
+    <listitem>
+     <para>
+      a location specified by the package maintainer (if <application>repmgr</application>
+      as installed from a package and the package maintainer has specified the configuration
+      file location)
+     </para>
+    </listitem>
+    <listitem>
+     <para><filename>repmgr.conf</filename> in the local directory</para>
+    </listitem>
+    <listitem>
+      <para><filename>/etc/repmgr.conf</filename></para>
+    </listitem>
+    <listitem>
+     <para>the directory reported by <application>pg_config --sysconfdir</application></para>
+    </listitem>
+   </itemizedlist>
+  </para>
+
+  <para>
+   Note that if a file is explicitly specified with <literal>-f/--config-file</literal>,
+   an error will be raised if it is not found or not readable, and no attempt will be made to
+   check default locations; this is to prevent <application>repmgr</application> unexpectedly
+   reading the wrong configuration file.
+  </para>
+
+  <note>
+    <para>
+      If providing the configuration file location with <literal>-f/--config-file</literal>,
+      avoid using a relative path, particularly when executing <xref linkend="repmgr-primary-register">
+      and <xref linkend="repmgr-standby-register">, as &repmgr; stores the configuration file location
+      in the repmgr metadata for use when &repmgr; is executed remotely (e.g. during
+      <xref linkend="repmgr-standby-switchover">). &repmgr; will attempt to convert the
+      a relative path into an absolute one, but this may not be the same as the path you
+      would explicitly provide (e.g. <filename>./repmgr.conf</filename> might be converted
+      to <filename>/path/to/./repmgr.conf</filename>, whereas you'd normally write
+      <filename>/path/to/repmgr.conf</filename>).
+    </para>
+   </note>
+
+   </sect2>
+ </sect1>

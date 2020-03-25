@@ -1,0 +1,183 @@
+<refentry id="repmgr-standby-register" xreflabel="repmgr standby register">
+  <indexterm>
+    <primary>repmgr standby register</primary>
+  </indexterm>
+
+  <refmeta>
+    <refentrytitle>repmgr standby register</refentrytitle>
+  </refmeta>
+
+  <refnamediv>
+    <refname>repmgr standby register</refname>
+    <refpurpose>add a standby's information to the &repmgr; metadata</refpurpose>
+  </refnamediv>
+
+  <refsect1>
+    <title>Description</title>
+    <para>
+      <command>repmgr standby register</command> adds a standby's information to
+      the &repmgr; metadata. This command needs to be executed to enable
+      promote/follow operations and to allow <application>repmgrd</application> to work with the node.
+      An existing standby can be registered using this command. Execute with the
+      <literal>--dry-run</literal> option to check what would happen without actually registering the
+      standby.
+    </para>
+
+    <note>
+      <para>
+        If providing the configuration file location with <literal>-f/--config-file</literal>,
+        avoid using a relative path, as &repmgr; stores the configuration file location
+        in the repmgr metadata for use when &repmgr; is executed remotely (e.g. during
+        <xref linkend="repmgr-standby-switchover">). &repmgr; will attempt to convert the
+          a relative path into an absolute one, but this may not be the same as the path you
+          would explicitly provide (e.g. <filename>./repmgr.conf</filename> might be converted
+          to <filename>/path/to/./repmgr.conf</filename>, whereas you'd normally write
+          <filename>/path/to/repmgr.conf</filename>).
+      </para>
+    </note>
+  </refsect1>
+
+  <refsect1 id="repmgr-standby-register-wait-start" xreflabel="repmgr standby register --wait-start">
+   <title>Waiting for the the standby to start</title>
+   <para>
+     By default, &repmgr; will wait 30 seconds for the standby to become available before
+     aborting with a connection error. This is useful when setting up a standby from a script,
+     as the standby may not have fully started up by the time <command>repmgr standby register</command>
+     is executed.
+   </para>
+   <para>
+     To change the timeout, pass the desired value with the <literal>--wait-start</literal> option.
+     A value of <literal>0</literal> will disable the timeout.
+   </para>
+   <para>
+     The timeout will be ignored if <literal>-F/--force</literal> was provided.
+   </para>
+  </refsect1>
+
+  <refsect1 id="repmgr-standby-register-wait-sync" xreflabel="repmgr standby register --wait-sync">
+   <title>Waiting for the registration to propagate to the standby</title>
+   <para>
+     Depending on your environment and workload, it may take some time for the standby's node record
+     to propagate from the primary to the standby. Some actions (such as starting
+     <application>repmgrd</application>) require that the standby's node record
+     is present and up-to-date to function correctly.
+   </para>
+   <para>
+    By providing the option <option>--wait-sync</option> to the
+    <command>repmgr standby register</command> command, &repmgr; will wait
+    until the record is synchronised before exiting. An optional timeout (in
+    seconds) can be added to this option (e.g. <option>--wait-sync=60</option>).
+   </para>
+  </refsect1>
+
+  <refsect1 id="repmgr-standby-register-inactive-node" xreflabel="Registering an inactive node">
+   <title>Registering an inactive node</title>
+   <para>
+    Under some circumstances you may wish to register a standby which is not
+    yet running; this can be the case when using provisioning tools to create
+    a complex replication cluster. In this case, by using the <option>-F/--force</option>
+    option and providing the connection parameters to the primary server,
+    the standby can be registered.
+   </para>
+   <para>
+    Similarly, with cascading replication it may be necessary to register
+    a standby whose upstream node has not yet been registered - in this case,
+    using <option>-F/--force</option> will result in the creation of an inactive placeholder
+    record for the upstream node, which will however later need to be registered
+    with the <option>-F/--force</option> option too.
+   </para>
+   <para>
+    When used with <command>repmgr standby register</command>, care should be taken that use of the
+    <option>-F/--force</option> option does not result in an incorrectly configured cluster.
+   </para>
+  </refsect1>
+
+  <refsect1 id="repmgr-standby-register-node-cloned-other-source">
+    <title>Registering a node not cloned by repmgr</title>
+    <para>
+      If you've cloned a standby using another method (e.g. <application>barman</application>'s
+     <command>barman recover</command> command), first execute
+     <link linkend="repmgr-standby-create-recovery-conf">repmgr standby clone --recovery-conf-only</link>
+     to add the <filename>recovery.conf</filename> file, then register the standby as usual.
+    </para>
+  </refsect1>
+
+  <refsect1>
+
+    <title>Options</title>
+
+    <variablelist>
+
+      <varlistentry>
+        <term><option>--dry-run</option></term>
+        <listitem>
+          <para>
+            Check prerequisites but don't actually register the standby.
+          </para>
+        </listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+       <term><option>-F</option><option>--force</option></term>
+        <listitem>
+          <para>
+            Overwrite an existing node record
+          </para>
+        </listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+        <term><option>--upstream-node-id</option></term>
+        <listitem>
+          <para>
+            ID of the upstream node to replicate from (optional)
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--wait-start</option></term>
+        <listitem>
+          <para>
+            wait for the standby to start (timeout in seconds, default 30 seconds)
+          </para>
+        </listitem>
+      </varlistentry>
+
+     <varlistentry>
+        <term><option>--wait-sync</option></term>
+        <listitem>
+          <para>
+            wait for the node record to synchronise to the standby (optional timeout in seconds)
+          </para>
+        </listitem>
+      </varlistentry>
+
+
+    </variablelist>
+  </refsect1>
+
+  <refsect1 id="repmgr-standby-register-events">
+    <title>Event notifications</title>
+    <para>
+      A <literal>standby_register</literal> <link linkend="event-notifications">event notification</link>
+      will be generated immediately after the node record is updated on the primary.
+    </para>
+
+    <para>
+      If the <option>--wait-sync</option> option is provided, a <literal>standby_register_sync</literal>
+      event notification  will be generated immediately after the node record has synchronised to the
+      standby.
+    </para>
+
+    <para>
+      If provided, &repmgr; will substitute the placeholders <literal>%p</literal> with the node ID of the
+      primary node, <literal>%c</literal> with its <literal>conninfo</literal> string, and
+      <literal>%a</literal> with its node name.
+    </para>
+
+  </refsect1>
+
+</refentry>

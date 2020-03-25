@@ -1,0 +1,96 @@
+<refentry id="repmgr-cluster-crosscheck">
+  <indexterm>
+    <primary>repmgr cluster crosscheck</primary>
+  </indexterm>
+
+
+  <refmeta>
+    <refentrytitle>repmgr cluster crosscheck</refentrytitle>
+  </refmeta>
+
+  <refnamediv>
+    <refname>repmgr cluster crosscheck</refname>
+    <refpurpose>cross-checks connections between each combination of nodes</refpurpose>
+  </refnamediv>
+
+  <refsect1>
+    <title>Description</title>
+    <para>
+      <command>repmgr cluster crosscheck</command> is similar to <xref linkend="repmgr-cluster-matrix">,
+        but cross-checks connections between each combination of nodes. In "Example 3" in
+        <xref linkend="repmgr-cluster-matrix"> we have no information about the state of <literal>node3</literal>.
+        However by running <command>repmgr cluster crosscheck</command> it's possible to get a better
+        overview of the cluster situation:
+          <programlisting>
+    $ repmgr -f /etc/repmgr.conf cluster crosscheck
+
+    Name   | Id |  1 |  2 |  3
+    -------+----+----+----+----
+     node1 |  1 |  * |  * |  x
+     node2 |  2 |  * |  * |  *
+     node3 |  3 |  * |  * |  *</programlisting>
+    </para>
+    <para>
+      What happened is that <command>repmgr cluster crosscheck</command> merged its own
+      <command><link linkend="repmgr-cluster-matrix">repmgr cluster matrix</link></command> with the
+      <command>repmgr cluster matrix</command> output from <literal>node2</literal>; the latter is
+      able to connect to <literal>node3</literal>
+      and therefore determine the state of outbound connections from that node.
+    </para>
+  </refsect1>
+
+  <refsect1>
+    <title>Exit codes</title>
+    <para>
+      One of the following exit codes will be emitted by <command>repmgr cluster crosscheck</command>:
+    </para>
+    <variablelist>
+
+      <varlistentry>
+        <term><option>SUCCESS (0)</option></term>
+        <listitem>
+          <para>
+            The check completed successfully and all nodes are reachable.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_BAD_SSH (12)</option></term>
+        <listitem>
+          <para>
+            One or more nodes could not be accessed via SSH.
+          </para>
+          <note>
+            <simpara>
+              This only applies to nodes unreachable from the node where
+              this command is executed.
+            </simpara>
+            <simpara>
+              It's also possible that the crosscheck establishes that
+              connections between PostgreSQL on all nodes are functioning,
+              even if SSH access between some nodes is not possible.
+            </simpara>
+          </note>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_NODE_STATUS (25)</option></term>
+        <listitem>
+          <para>
+            PostgreSQL on one or more nodes could not be reached.
+          </para>
+          <note>
+            <simpara>
+              This error code overrides <option>ERR_BAD_SSH</option>.
+            </simpara>
+          </note>
+        </listitem>
+      </varlistentry>
+
+   </variablelist>
+  </refsect1>
+
+</refentry>
+

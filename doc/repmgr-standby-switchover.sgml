@@ -1,0 +1,360 @@
+<refentry id="repmgr-standby-switchover">
+  <indexterm>
+    <primary>repmgr standby switchover</primary>
+  </indexterm>
+
+  <refmeta>
+    <refentrytitle>repmgr standby switchover</refentrytitle>
+  </refmeta>
+
+  <refnamediv>
+    <refname>repmgr standby switchover</refname>
+    <refpurpose>promote a standby to primary and demote the existing primary to a standby</refpurpose>
+  </refnamediv>
+
+
+  <refsect1>
+    <title>Description</title>
+
+    <para>
+      Promotes a standby to primary and demotes the existing primary to a standby.
+      This command must be run on the standby to be promoted, and requires a
+      passwordless SSH connection to the current primary.
+    </para>
+    <para>
+      If other standbys are connected to the demotion candidate, &repmgr; can instruct
+      these to follow the new primary if the option <literal>--siblings-follow</literal>
+      is specified. This requires a passwordless SSH connection between the promotion
+      candidate (new primary) and the standbys attached to the demotion candidate
+      (existing primary).
+    </para>
+    <note>
+      <para>
+        Performing a switchover is a non-trivial operation. In particular it
+        relies on the current primary being able to shut down cleanly and quickly.
+        &repmgr; will attempt to check for potential issues but cannot guarantee
+        a successful switchover.
+      </para>
+      <para>
+        &repmgr; will refuse to perform the switchover if an exclusive backup is running on
+        the current primary, or if WAL replay is paused on the standby.
+      </para>
+    </note>
+    <para>
+      For more details on performing a switchover, including preparation and configuration,
+      see section <xref linkend="performing-switchover">.
+    </para>
+
+    <note>
+      <para>
+        From <link linkend="release-4.2">repmgr 4.2</link>, &repmgr; will instruct any running
+        <application>repmgrd</application> instances to pause operations while the switchover
+        is being carried out, to prevent <application>repmgrd</application> from
+        unintentionally promoting a node. For more details, see <xref linkend="repmgrd-pausing">.
+      </para>
+      <para>
+        Users of &repmgr; versions prior to 4.2 should ensure that <application>repmgrd</application>
+        is not running on any nodes while a switchover is being executed.
+      </para>
+    </note>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Options</title>
+    <variablelist>
+
+      <varlistentry>
+        <term><option>--always-promote</option></term>
+        <listitem>
+          <para>
+            Promote standby to primary, even if it is behind or has diverged
+            from the original primary. The original primary will be shut down in any case,
+            and will need to be manually reintegrated into the replication cluster.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--dry-run</option></term>
+        <listitem>
+          <para>
+            Check prerequisites but don't actually execute a switchover.
+          </para>
+          <important>
+            <para>
+              Success of <option>--dry-run</option> does not imply the switchover will
+              complete successfully, only that
+              the prerequisites for performing the operation are met.
+            </para>
+          </important>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-F</option></term>
+        <term><option>--force</option></term>
+        <listitem>
+          <para>
+            Ignore warnings and continue anyway.
+          </para>
+          <para>
+            Specifically, if a problem is encountered when shutting down the current primary,
+            using <option>-F/--force</option> will cause &repmgr; to continue by promoting
+            the standby to be the new primary, and if <option>--siblings-follow</option> is
+            specified, attach any other standbys to the new primary.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--force-rewind[=/path/to/pg_rewind]</option></term>
+        <listitem>
+          <para>
+            Use <application>pg_rewind</application> to reintegrate the old primary if necessary
+            (and the prerequisites for using <application>pg_rewind</application> are met).
+            If using PostgreSQL 9.3 or 9.4, and the <application>pg_rewind</application>
+            binary is not installed in the PostgreSQL <filename>bin</filename> directory,
+            provide its full path. For more details see also <xref linkend="switchover-pg-rewind">.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-R</option></term>
+        <term><option>--remote-user</option></term>
+        <listitem>
+          <para>
+            System username for remote SSH operations (defaults to local system user).
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--repmgrd-no-pause</option></term>
+        <listitem>
+          <para>
+            Don't pause <application>repmgrd</application> while executing a switchover.
+          </para>
+          <para>
+            This option should not be used unless you take steps by other means
+            to ensure <application>repmgrd</application> is paused or not
+            running on all nodes.
+          </para>
+        </listitem>
+      </varlistentry>
+
+
+     <varlistentry>
+
+        <term><option>--siblings-follow</option></term>
+        <listitem>
+          <para>
+            Have standbys attached to the old primary follow the new primary.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Configuration file settings</title>
+
+    <para>
+     The following parameters in <filename>repmgr.conf</filename> are relevant to the
+     switchover operation:
+    </para>
+
+    <variablelist>
+
+      <varlistentry>
+        <indexterm>
+          <primary>replication_lag_critical</primary>
+          <secondary>with &quot;repmgr standby switchover&quot;</secondary>
+        </indexterm>
+
+        <term><option>replication_lag_critical</option></term>
+        <listitem>
+          <para>
+            If replication lag (in seconds) on the standby exceeds this value, the
+            switchover will be aborted (unless the <literal>-F/--force</literal> option
+            is provided)
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <indexterm>
+          <primary>shutdown_check_timeout</primary>
+          <secondary>with &quot;repmgr standby switchover&quot;</secondary>
+        </indexterm>
+
+        <term><option>shutdown_check_timeout</option></term>
+        <listitem>
+          <para>
+            The maximum number of seconds to wait for the
+            demotion candidate (current primary) to shut down, before aborting the switchover.
+          </para>
+          <para>
+            Note that this parameter is set on the node where <command>repmgr standby switchover</command>
+            is executed (promotion candidate); setting it on the demotion candidate (former primary) will
+            have no effect.
+          </para>
+         <note>
+           <para>
+             In versions prior to <link linkend="release-4.2">&repmgr; 4.2</link>, <command>repmgr standby switchover</command> would
+             use the values defined in <literal>reconnect_attempts</literal> and <literal>reconnect_interval</literal>
+             to determine the timeout for demotion candidate shutdown.
+           </para>
+         </note>
+        </listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+        <indexterm>
+          <primary>wal_receive_check_timeout</primary>
+          <secondary>with &quot;repmgr standby switchover&quot;</secondary>
+        </indexterm>
+
+        <term><option>wal_receive_check_timeout</option></term>
+        <listitem>
+          <para>
+            After the primary has shut down, the maximum number of seconds to wait for the
+            walreceiver on the standby to flush WAL to disk before comparing WAL receive location
+            with the primary's shut down location.
+         </para>
+        </listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+        <indexterm>
+          <primary>standby_reconnect_timeout</primary>
+          <secondary>with &quot;repmgr standby switchover&quot;</secondary>
+        </indexterm>
+
+        <term><option>standby_reconnect_timeout</option></term>
+        <listitem>
+          <para>
+            The maximum number of seconds to attempt to wait for the demotion candidate (former primary)
+            to reconnect to the promoted primary (default: 60 seconds)
+          </para>
+          <para>
+            Note that this parameter is set on the node where <command>repmgr standby switchover</command>
+            is executed (promotion candidate); setting it on the demotion candidate (former primary) will
+            have no effect.
+          </para>
+        </listitem>
+      </varlistentry>
+
+     <varlistentry>
+        <indexterm>
+          <primary>node_rejoin_timeout</primary>
+          <secondary>with &quot;repmgr standby switchover&quot;</secondary>
+        </indexterm>
+
+        <term><option>node_rejoin_timeout</option></term>
+        <listitem>
+          <para>
+            maximum number of seconds to attempt to wait for the demotion candidate (former primary)
+            to reconnect to the promoted primary (default: 60 seconds)
+          </para>
+          <para>
+            Note that this parameter is set on the the demotion candidate (former primary);
+            setting it on the node where <command>repmgr standby switchover</command> is
+            executed will have no effect.
+          </para>
+          <para>
+            However, this value <emphasis>must</emphasis> be less than <option>standby_reconnect_timeout</option> on the
+            promotion candidate (the node where <command>repmgr standby switchover</command> is executed).
+          </para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </refsect1>
+
+
+  <refsect1>
+    <title>Execution</title>
+
+    <para>
+      Execute with the <literal>--dry-run</literal> option to test the switchover as far as
+      possible without actually changing the status of either node.
+    </para>
+
+    <para>
+      External database connections, e.g. from an application, should not be permitted while
+      the switchover is taking place. In particular, active transactions on the primary
+      can potentially disrupt the shutdown process.
+    </para>
+  </refsect1>
+
+  <refsect1 id="repmgr-standby-switchover-events">
+    <title>Event notifications</title>
+    <para>
+      <literal>standby_switchover</literal> and <literal>standby_promote</literal>
+      <link linkend="event-notifications">event notifications</link> will be generated for the new primary,
+      and a <literal>node_rejoin</literal> event notification for the former primary (new standby).
+    </para>
+    <para>
+      If using an event notification script, <literal>standby_switchover</literal>
+      will populate the placeholder parameter <literal>%p</literal> with the node ID of
+      the former primary.
+    </para>
+  </refsect1>
+
+  <refsect1>
+    <title>Exit codes</title>
+    <para>
+      One of the following exit codes will be emitted by <command>repmgr standby switchover</command>:
+    </para>
+    <variablelist>
+
+      <varlistentry>
+        <term><option>SUCCESS (0)</option></term>
+        <listitem>
+          <para>
+            The switchover completed successfully; or if <option>--dry-run</option> was provided,
+            no issues were detected which would prevent the switchover operation.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_SWITCHOVER_FAIL (18)</option></term>
+        <listitem>
+          <para>
+            The switchover could not be executed.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_SWITCHOVER_INCOMPLETE (22)</option></term>
+        <listitem>
+          <para>
+            The switchover was executed but a problem was encountered.
+            Typically this means the former primary could not be reattached
+            as a standby. Check preceding log messages for more information.
+          </para>
+        </listitem>
+      </varlistentry>
+
+   </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+    <para>
+      <xref linkend="repmgr-standby-follow">, <xref linkend="repmgr-node-rejoin">
+    </para>
+    <para>
+      For more details on performing a switchover operation, see the section <xref linkend="performing-switchover">.
+    </para>
+  </refsect1>
+
+</refentry>

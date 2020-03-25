@@ -1,0 +1,1853 @@
+<appendix id="appendix-release-notes">
+  <title>Release notes</title>
+  <indexterm>
+    <primary>Release notes</primary>
+  </indexterm>
+
+  <para>
+    Changes to each &repmgr; release are documented in the release notes.
+    Please read the release notes for all versions between
+    your current version and the version you are plan to upgrade to
+    before performing an upgrade, as there may be version-specific upgrade steps.
+  </para>
+
+  <para>
+    See also: <xref linkend="upgrading-repmgr">
+  </para>
+
+  <sect1 id="release-4.3">
+    <title>Release 4.3</title>
+    <para><emphasis>Mar ???, 2019</emphasis></para>
+    <para>
+      &repmgr; 4.3 is a major release.
+    </para>
+
+	<important>
+	  <para>
+	    On Debian-based systems, including Ubuntu, if using <application>repmgrd</application>
+	    please ensure that in the file <filename>/etc/init.d/repmgrd</filename>, the parameter
+	    <varname>REPMGRD_OPTS</varname> contains &quot;<literal>--daemonize=false</literal>&quot;, e.g.:
+	    <programlisting>
+# additional options
+REPMGRD_OPTS="--daemonize=false"</programlisting>
+	  </para>
+	  <para>
+	    For further details, see <link linkend="repmgrd-configuration-debian-ubuntu">repmgrd configuration on Debian/Ubuntu</link>.
+	  </para>
+	</important>
+
+    <sect2>
+      <title>repmgr enhancements</title>
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              <link linkend="repmgr-standby-follow"><command>repmgr standby follow</command></link>:
+              option <option>--upstream-node-id</option> can now be used to specify another standby
+              to follow.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <link linkend="repmgr-standby-follow"><command>repmgr standby follow</command></link>:
+              verify that it is actually possible to follow another node.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <link linkend="repmgr-node-rejoin"><command>repmgr node rejoin</command></link>:
+              verify that it is actually possible to attach the node to the current primary.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              New commands <link linkend="repmgr-daemon-start"><command>repmgr daemon start</command></link> and
+              <link linkend="repmgr-daemon-stop"><command>repmgr daemon stop</command></link>:
+              these provide a standardized way of starting and stopping <application>repmgrd</application>.
+              GitHub #528.
+            </para>
+            <note>
+              <para>
+                These commands require the configuration file settings
+                <varname>repmgrd_service_start_command</varname> and <varname>repmgrd_service_stop_command</varname>
+                in <filename>repmgr.conf</filename> to be set.
+              </para>
+            </note>
+          </listitem>
+
+          <listitem>
+            <para>
+              <link linkend="repmgr-daemon-status"><command>repmgr daemon status</command></link>
+              additionally displays the node priority and the interval (in seconds) since the
+              <application>repmgrd</application> instance last verified its upstream node was available.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Add <option>--compact</option> option to <command><link linkend="repmgr-cluster-show">repmgr cluster show</link></command> (GitHub #521).
+            </para>
+            <para>
+              This makes it easier to copy the output into emails, chats etc. as a compact table.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-cluster-show">repmgr cluster show</link></command>:
+	      differentiate between unreachable nodes and nodes which are running but rejecting connections.
+            </para>
+            <para>
+	      This makes it possible to see whether a node is unreachable at network level,
+	      or if it is running but rejecting connections for some reason.
+            </para>
+          </listitem>
+
+
+          <listitem>
+            <para>
+              Add <option>--dry-run</option> to <command><link linkend="repmgr-standby-promote">repmgr standby promote</link></command> (GitHub #522).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <command>repmgr --version-number</command> outputs the &quot;raw&quot;
+              repmgr version number (e.g. <literal>40300</literal>). This is intended
+              for use by scripts etc. requiring an easily parseable representation
+              of the &repmgr; version.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <link linkend="repmgr-node-check"><command>repmgr node check --data-directory-config</command></link>
+              option added; this is to confirm &repmgr; is correctly configured. GitHub #523.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Add check to <link linkend="repmgr-standby-switchover"><command>repmgr standby switchover</command></link>
+              to ensure the data directory on the demotion candidate is configured correctly in <filename>repmgr.conf</filename>.
+              This is to ensure that &repmgr;, when remotely executed on the demotion candidate, can correctly verify
+              that PostgreSQL on the demotion candidate was shut down cleanly. GitHub #523.
+            </para>
+          </listitem>
+
+
+       </itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>repmgrd enhancements</title>
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application> will no longer consider nodes where <application>repmgrd</application>
+			  is not running as promotion candidates.
+            </para>
+            <para>
+              Previously, if <application>repmgrd</application> was not running on a node, but
+              that node qualified as the promotion candidate, it would never be promoted due to
+              the absence of a running <application>repmgrd</application>.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Add option <option>connection_check_type</option> to enable selection of the method
+              <application>repmgrd</application> uses to determine whether the upstream node is available.
+            </para>
+            <para>
+              Possible values are <literal>ping</literal> (default; uses <command>PQping()</command> to
+              determine server availability), <literal>connection</literal> (attempst to make a new connection to
+              the upstream node), and <literal>query</literal> (determines server availability
+              by executing an SQL statement on the node via the existing connection).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              New configuration option <link linkend="repmgrd-failover-validation"><option>failover_validation_command</option></link>
+              to allow an external mechanism to validate the failover decision made by <application>repmgrd</application>.
+            </para>
+          </listitem>
+
+         <listitem>
+            <para>
+              New configuration option <link linkend="repmgrd-standby-disconnection-on-failover"><option>standby_disconnect_on_failover</option></link>
+              to force standbys to disconnect their WAL receivers before making a failover decision.
+            </para>
+          </listitem>
+
+         <listitem>
+            <para>
+			  In a failover situation, <application>repmgrd</application> will not attempt to promote a
+			  node if another standby has already appeared (e.g. by being promoted manually).
+			  GitHub #420.
+			</para>
+          </listitem>
+
+		</itemizedlist>
+	  </para>
+	</sect2>
+
+    <sect2>
+      <title>Bug fixes</title>
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              &repmgr;: when executing <command><link linkend="repmgr-standby-switchover">repmgr standby switchover</link></command>,
+              prevent escaping issues with connection URIs when executing <command><link linkend="repmgr-node-rejoin">repmgr node rejoin</link></command>
+              on the demotion candidate. GitHub #525.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              &repmgr;: when executing <command><link linkend="repmgr-witness-register">repmgr witness register</link></command>,
+              check the node to connected is actually the primary (i.e. not the witness server).  GitHub #528.
+            </para>
+          </listitem>
+
+         <listitem>
+            <para>
+              &repmgr;: when executing <link linkend="repmgr-standby-clone"><command>repmgr standby clone</command></link>,
+              recheck primary/upstream connection(s) after the data copy operation is complete, as these may
+              have gone away.
+            </para>
+          </listitem>
+
+         <listitem>
+            <para>
+              &repmgr;: when executing <link linkend="repmgr-standby-switchover"><command>repmgr standby switchover</command></link>,
+              avoid a potential race condition when comparing received WAL on the standby to the primary's shutdown location,
+	      as the standby's walreceiver may not have yet flushed all received WAL to disk. GitHub #518.
+            </para>
+          </listitem>
+
+
+         <listitem>
+            <para>
+              &repmgr;: when executing <link linkend="repmgr-standby-switchover"><command>repmgr standby switchover</command></link>,
+	      verify the standby (promotion candidate) is currently attached to the primary (demotion candidate). GitHub #519.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: on a cascaded standby, don't fail over if
+              <literal>failover=manual</literal>. GitHub #531.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-cluster-show">repmgr cluster show</link></command>:
+	          fix display of node IDs with multiple digits.
+            </para>
+	      </listitem>
+
+          <listitem>
+            <para>
+              ensure <command><link linkend="repmgr-primary-unregister">repmgr primary unregister</link></command>
+	          behaves correctly when executed on a witness server. GitHub #548.
+            </para>
+	      </listitem>
+
+          <listitem>
+            <para>
+              ensure <command><link linkend="repmgr-standby-register">repmgr standby register</link></command>
+	          fails when <option>--upstream-node-id</option> is the same as the local node ID.
+            </para>
+	      </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-node-check">repmgr node check</link></command>
+	          will only consider physical replication slots, as the purpose
+	          of slot checks is to warn about potential issues with
+	          streaming replication standbys which are no longer attached.
+	        </para>
+	      </listitem>
+
+        </itemizedlist>
+      </para>
+    </sect2>
+
+  </sect1>
+
+  <sect1 id="release-4.2">
+    <title>Release 4.2</title>
+    <para><emphasis>Wed October 24, 2018</emphasis></para>
+
+    <para>
+      &repmgr; 4.2 is a major release, with the main new feature being the
+      ability to <link linkend="repmgrd-pausing">pause repmgrd</link>, e.g. during planned maintenance
+      operations. Various other usability enhancements and a couple of bug fixes are also included;
+      see notes below for details.
+    </para>
+    <para>
+      A restart of the PostgreSQL server <emphasis>is</emphasis> required
+      for this release. For detailed upgrade instructions, see
+      <link linkend="upgrading-major-version">Upgrading a major version release</link>.
+    </para>
+
+	<important>
+	  <para>
+	    On Debian-based systems, including Ubuntu, if using <application>repmgrd</application>
+	    please ensure that the in the file <filename>/etc/init.d/repmgrd</filename>, the parameter
+	    <varname>REPMGRD_OPTS</varname> contains &quot;<literal>--daemonize=false</literal>&quot;, e.g.:
+	    <programlisting>
+# additional options
+REPMGRD_OPTS="--daemonize=false"</programlisting>
+	  </para>
+	  <para>
+	    For further details, see <link linkend="repmgrd-configuration-debian-ubuntu">repmgrd daemon configuration on Debian/Ubuntu</link>.
+	  </para>
+	</important>
+
+    <sect2>
+      <title>Configuration file changes</title>
+      <para>
+        <itemizedlist>
+          <listitem>
+            <para>
+              New parameter <varname>shutdown_check_timeout</varname> (default: 60 seconds) added;
+              this provides an explicit timeout for
+              <command><link linkend="repmgr-standby-switchover">repmgr standby switchover</link></command>
+              to check that the demotion candidate (current primary) has shut down. Previously, the parameters
+              <literal>reconnect_attempts</literal> and <literal>reconnect_interval</literal>
+              were used to calculate a timeout, but these are actually
+              intended for primary failure detection. (GitHub #504).
+            </para>
+          </listitem>
+        </itemizedlist>
+
+        <itemizedlist>
+          <listitem>
+            <para>
+              New parameter <varname>repmgr_bindir</varname> added, to facilitate remote invocation of repmgr
+              when the repmgr binary is located somewhere other than the PostgreSQL binary directory, as it
+              cannot be assumed all package maintainers will install &repmgr; there.
+            </para>
+            <para>
+              This parameter is optional; if not set (the default), &repmgr; will fall back
+              to <option>pg_bindir</option> (if set).
+            </para>
+            <para>
+              (GitHub #246).
+            </para>
+          </listitem>
+        </itemizedlist>
+      </para>
+
+    </sect2>
+
+    <sect2>
+      <title>repmgr enhancements</title>
+      <para>
+       <itemizedlist>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-cluster-cleanup">repmgr cluster cleanup</link></command>
+              now accepts the <option>--node-id</option> option to delete records for only one
+              node. (GitHub #493).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              When running
+              <command><link linkend="repmgr-cluster-matrix">repmgr cluster matrix</link></command> and
+              <command><link linkend="repmgr-cluster-crosscheck">repmgr cluster crosscheck</link></command>,
+              &repmgr; will report nodes unreachable via SSH, and emit return code <literal>ERR_BAD_SSH</literal>.
+              (GitHub #246).
+            </para>
+            <note>
+              <para>
+                Users relying on
+                <command><link linkend="repmgr-cluster-crosscheck">repmgr cluster crosscheck</link></command>
+                to return a non-zero return code as a way of detecting connectivity errors should be aware
+                that <literal>ERR_BAD_SSH</literal> will be returned if there is an SSH connection error
+                from the node where the command is executed, even if the command is able to establish
+                that PostgreSQL connectivity is fine. Therefore the exact return code should be checked
+                to determine what kind of connectivity error has been detected.
+              </para>
+            </note>
+          </listitem>
+
+        </itemizedlist>
+      </para>
+    </sect2>
+
+
+    <sect2>
+      <title>repmgrd enhancements</title>
+      <para>
+       <itemizedlist>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application> can now be &quot;paused&quot;, i.e. instructed
+              not to take any action such as a failover, even if the prerequisites for such an
+              action are detected.
+            </para>
+            <para>
+              This removes the need to stop <application>repmgrd</application> on all nodes when
+              performing a planned operation such as a switchover.
+            </para>
+            <para>
+              For further details, see <link linkend="repmgrd-pausing">Pausing repmgrd</link>.
+            </para>
+          </listitem>
+
+       </itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Bug fixes</title>
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              &repmgr;: fix &quot;Missing replication slots&quot; label in
+              <command><link linkend="repmgr-node-check">repmgr node check</link></command>.  (GitHub #507)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: fix parsing of <option>-d/--daemonize</option> option.
+            </para>
+          </listitem>
+
+        </itemizedlist>
+      </para>
+    </sect2>
+  </sect1>
+
+  <sect1 id="release-4.1.1">
+    <title>Release 4.1.1</title>
+    <para><emphasis>Wed September 5, 2018</emphasis></para>
+    <para>
+      repmgr 4.1.1 contains a number of usability enhancements and bug fixes.
+    </para>
+    <para>
+	  We recommend upgrading to this version as soon as possible.
+	  This release can be installed as a simple package upgrade from repmgr 4.0 ~ 4.1.0;
+      <application>repmgrd</application> (if running) should be restarted.
+      See <xref linkend="upgrading-repmgr"> for more details.
+	</para>
+
+    <sect2>
+      <title>repmgr enhancements</title>
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-standby-switchover">repmgr standby switchover --dry-run</link></command>
+              no longer copies external configuration files to test they can be copied; this avoids making
+              any changes to the target system. (GitHub #491).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-cluster-cleanup">repmgr cluster cleanup</link></command>:
+              add <literal>cluster_cleanup</literal> event. (GitHub #492).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-standby-switchover">repmgr standby switchover</link></command>:
+              improve detection of free walsenders. (GitHub #495).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Improve messages emitted during
+              <command><link linkend="repmgr-standby-promote">repmgr standby promote</link></command>.
+            </para>
+          </listitem>
+
+        </itemizedlist>
+      </para>
+   </sect2>
+
+
+    <sect2>
+      <title>repmgrd enhancements</title>
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              Always reopen the log file after
+              receiving <literal>SIGHUP</literal>. Previously this only happened if
+              a configuration file change was detected.
+              (GitHub #485).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Report version number <emphasis>after</emphasis>
+              logger initialisation. (GitHub #487).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Improve cascaded standby failover handling. (GitHub #480).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Improve reconnection handling after brief network outages; if
+              monitoring data being collected, this could lead to orphaned
+              sessions on the primary. (GitHub #480).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Check <varname>promote_command</varname> and <varname>follow_command</varname>
+              are defined when reloading configuration. These were checked on startup but
+              not reload by <application>repmgrd</application>, which made it possible to
+              make <application>repmgrd</application> with invalid values. It's unlikely
+              anyone would want to do this, but we should make it impossible anyway.
+              (GitHub #486).
+            </para>
+          </listitem>
+
+        </itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Other</title>
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              Text of any failed queries will now be logged as <literal>ERROR</literal> to assist
+              logfile analysis at log levels higher than <literal>DEBUG</literal>.
+              (GitHub #498).
+            </para>
+          </listitem>
+        </itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Bug fixes</title>
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-node-rejoin">repmgr node rejoin</link></command>:
+              remove new upstream's replication slot if it still exists on the rejoined
+              standby. (GitHub #499).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: fix startup on witness node when local data is stale. (GitHub #488, #489).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Truncate version string reported by PostgreSQL if necessary; some
+              distributions insert additional detail after the actual version.
+              (GitHub #490).
+            </para>
+          </listitem>
+
+
+        </itemizedlist>
+      </para>
+    </sect2>
+
+
+  </sect1>
+
+
+
+  <sect1 id="release-4.1.0">
+    <title>Release 4.1.0</title>
+    <para><emphasis>Tue July 31, 2018</emphasis></para>
+    <para>
+      &repmgr; 4.1.0 introduces some changes to <application>repmgrd</application>
+      behaviour and some additional configuration parameters.
+    </para>
+    <para>
+      This release can be installed as a simple package upgrade from repmgr 4.0 ~ 4.0.6.
+      The following post-upgrade steps must be carried out:
+
+       <itemizedlist>
+          <listitem>
+            <para>
+              Execute <command>ALTER EXTENSION repmgr UPDATE</command>
+              on the primary server in the database where &repmgr; is installed.
+            </para>
+          </listitem>
+          <listitem>
+            <para>
+              <application>repmgrd</application> must be restarted on all nodes where it is running.
+            </para>
+          </listitem>
+
+       </itemizedlist>
+
+       A restart of the PostgreSQL server is <emphasis>not</emphasis> required
+       for this release (unless upgrading from repmgr 3.x).
+    </para>
+    <para>
+       See <xref linkend="upgrading-repmgr-extension"> for more details.
+    </para>
+
+    <para>
+      Configuration changes are backwards-compatible and no changes to
+      <filename>repmgr.conf</filename> are required. However users should
+      review the changes listed below.
+    </para>
+
+    <note>
+      <para>
+        <emphasis>Repository changes</emphasis>
+      </para>
+      <para>
+        Coinciding with this release, the 2ndQuadrant repository structure has changed.
+        See section <xref linkend="installation-packages"> for details, particularly
+        if you are using a RPM-based system.
+      </para>
+    </note>
+
+    <sect2>
+      <title>Configuration file changes</title>
+
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              Default for <xref linkend="repmgr-conf-log-level"> is now <option>INFO</option>.
+              This produces additional informative log output, without creating excessive additional
+              log file volume, and matches the setting assumed for examples in the documentation.
+              (GitHub #470).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <varname>recovery_min_apply_delay</varname> now accepts a minimum value
+              of <literal>zero</literal> (GitHub #448).
+            </para>
+          </listitem>
+
+        </itemizedlist>
+      </para>
+
+    </sect2>
+
+
+    <sect2>
+      <title>repmgr enhancements</title>
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              <application>repmgr</application>: always exit with an error if an unrecognised
+              command line option is provided. This matches the behaviour of other PostgreSQL
+              utilities such as <application>psql</application>. (GitHub #464).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgr</application>: add <option>-q/--quiet</option> option to suppress non-error
+              output. (GitHub #468).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-cluster-show">repmgr cluster show</link></command>,
+              <command><link linkend="repmgr-node-check">repmgr node check</link></command> and
+              <command><link linkend="repmgr-node-status">repmgr node status</link></command>
+              return non-zero exit code if node status issues detected. (GitHub #456).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Add <option>--csv</option> output option for
+              <command><link linkend="repmgr-cluster-event">repmgr cluster event</link></command>.
+              (GitHub #471).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-witness-unregister">repmgr witness unregister</link></command>
+			  can be run on any node, by providing the ID of the witness node with <option>--node-id</option>.
+			  (GitHub #472).
+			</para>
+		  </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-standby-switchover">repmgr standby switchover</link></command>
+              will refuse to run if an exclusive backup is taking place on the current primary.
+			  (GitHub #476).
+			</para>
+		  </listitem>
+
+        </itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>repmgrd enhancements</title>
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: create a PID file by default
+              (GitHub #457). For details, see <xref linkend="repmgrd-pid-file">.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: daemonize process by default.
+			  In case, for whatever reason, the user does not wish to daemonize the
+			  process, provide <option>--daemonize=false</option>.
+			  (GitHub #458).
+            </para>
+          </listitem>
+
+
+        </itemizedlist>
+      </para>
+    </sect2>
+
+
+    <sect2>
+      <title>Bug fixes</title>
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-standby-register">repmgr standby register --wait-sync</link></command>:
+              fix behaviour when no timeout provided.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-cluster-cleanup">repmgr cluster cleanup</link></command>:
+			  add missing help options. (GitHub #461/#462).
+			</para>
+		  </listitem>
+
+          <listitem>
+            <para>
+			  Ensure witness node follows new primary after switchover. (GitHub #453).
+			</para>
+		  </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-node-check">repmgr node check</link></command> and
+              <command><link linkend="repmgr-node-status">repmgr node status</link></command>:
+			  fix witness node handling. (GitHub #451).
+			</para>
+		  </listitem>
+
+          <listitem>
+            <para>
+              When using <command><link linkend="repmgr-standby-clone">repmgr standby clone</link></command>
+              with <option>--recovery-conf-only</option> and replication slots, ensure
+              <varname>primary_slot_name</varname> is set correctly. (GitHub #474).
+            </para>
+          </listitem>
+
+        </itemizedlist>
+      </para>
+    </sect2>
+
+  </sect1>
+
+  <sect1 id="release-4.0.6">
+    <title>Release 4.0.6</title>
+    <para><emphasis>Thu June 14, 2018</emphasis></para>
+    <para>
+	  &repmgr; 4.0.6 contains a number of bug fixes and usability enhancements.
+    </para>
+	<para>
+	  We recommend upgrading to this version as soon as possible.
+	  This release can be installed as a simple package upgrade from repmgr 4.0 ~ 4.0.5;
+      <application>repmgrd</application> (if running) should be restarted. See <xref linkend="upgrading-repmgr">
+      for more details.
+	</para>
+
+    <sect2>
+      <title>Usability enhancements</title>
+
+      <para>
+        <itemizedlist>
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-cluster-crosscheck">repmgr cluster crosscheck</link></command> and
+              <command><link linkend="repmgr-cluster-matrix">repmgr cluster matrix</link></command>:
+              return non-zero exit code if node connection issues detected (GitHub #447)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+               <command><link linkend="repmgr-standby-clone">repmgr standby clone</link></command>:
+			   Improve handling of external configuration file copying,  including consideration in
+			   <option>--dry-run</option> check
+			   (GitHub #443)
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              When using <option>--dry-run</option>, force log level to <literal>INFO</literal>
+			  to ensure output will always be displayed
+			  (GitHub #441)
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+               <command><link linkend="repmgr-standby-clone">repmgr standby clone</link></command>:
+			   Improve documentation of <option>--recovery-conf-only</option> mode
+			   (GitHub #438)
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+               <command><link linkend="repmgr-standby-clone">repmgr standby clone</link></command>:
+			   Don't require presence of <varname>user</varname> parameter in conninfo string
+			   (GitHub #437)
+           </para>
+          </listitem>
+
+
+        </itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Bug fixes</title>
+      <para>
+
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-witness-register">repmgr witness register</link></command>:
+              prevent registration of a witness server with the same name as an existing node
+           </para>
+          </listitem>
+
+
+          <listitem>
+            <para>
+               <command><link linkend="repmgr-standby-follow">repmgr standby follow</link></command>:
+			   check node has actually connected to new primary before reporting success
+			   (GitHub #444)
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+               <command><link linkend="repmgr-node-rejoin">repmgr node rejoin</link></command>:
+			   Fix bug when parsing <option>--config-files</option> parameter
+			   (GitHub #442)
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: ensure local node is counted as quorum member
+			  (GitHub #439)
+           </para>
+          </listitem>
+
+        </itemizedlist>
+      </para>
+    </sect2>
+
+  </sect1>
+
+  <sect1 id="release-4.0.5">
+    <title>Release 4.0.5</title>
+    <para><emphasis>Wed May 2, 2018</emphasis></para>
+    <para>
+      &repmgr; 4.0.5 contains a number of usability enhancements related to
+      <application>pg_rewind</application> usage, <filename>recovery.conf</filename>
+      generation and (in <application>repmgrd</application>) handling of various
+      corner-case situations, as well as a number of bug fixes.
+    </para>
+
+    <sect2>
+      <title>Usability enhancements</title>
+
+      <para>
+        <itemizedlist>
+          <listitem>
+            <para>
+              Various documentation improvements, with particular emphasis on
+              the importance of setting appropriate <link linkend="configuration-file-service-commands">service commands</link>
+              instead of relying on <application>pg_ctl</application>.
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Poll demoted primary after restart as a standby during a switchover operation (GitHub #408).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Add configuration parameter <option>config_directory</option> (GitHub #424).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Add sanity check if <option>--upstream-node-id</option> not supplied when executing
+              <xref linkend="repmgr-standby-register"> (GitHub #395).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Enable <link linkend="repmgr-node-rejoin-pg-rewind">pg_rewind</link> to be used with
+              PostgreSQL 9.3/9.4 (GitHub #413).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              When generating replication connection strings, set <literal>dbname=replication</literal>
+              if appropriate (GitHub #421).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Enable provision of <option>archive_cleanup_command</option> in <filename>recovery.conf</filename>
+              (GitHub #416).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Actively check for node to <link linkend="repmgr-node-rejoin">rejoin</link> cluster (GitHub #415).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: set <literal>connect_timeout=2</literal> (if not explicitly set)
+              when pinging a server.
+           </para>
+          </listitem>
+
+        </itemizedlist>
+      </para>
+
+    </sect2>
+
+   <sect2>
+      <title>Bug fixes</title>
+      <para>
+
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              Fix display of conninfo parsing error messages.
+           </para>
+          </listitem>
+
+
+          <listitem>
+            <para>
+              Fix minimum accepted value for <varname>degraded_monitoring_timeout</varname> (GitHub #411).
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Fix superuser password handling (GitHub #400)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Fix parsing of <varname>archive_ready_critical</varname> configuration file parameter (GitHub #426).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Fix <command><link linkend="repmgr-cluster-crosscheck">repmgr cluster crosscheck</link></command>
+              output (GitHub #389)
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+               Fix memory leaks in witness code (GitHub #402).
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: handle <command>pg_ctl promote</command> timeout (GitHub #425).
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: handle failover situation with only two nodes in the primary
+          location, and at least one node in another location (GitHub #407).
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+               <application>repmgrd</application>: prevent standby connection handle from going stale.
+           </para>
+          </listitem>
+
+
+
+        </itemizedlist>
+      </para>
+   </sect2>
+
+  </sect1>
+
+
+  <sect1 id="release-4.0.4">
+    <title>Release 4.0.4</title>
+    <para><emphasis>Fri Mar 9, 2018</emphasis></para>
+
+    <para>
+      &repmgr; 4.0.4 contains some bug fixes and and a number of
+      usability enhancements related to logging/diagnostics,
+      event notifications and pre-action checks.
+    </para>
+    <para>
+      This release can be installed as a simple package upgrade from repmgr 4.0 ~ 4.0.3;
+      <application>repmgrd</application> (if running) should be restarted. See <xref linkend="upgrading-repmgr">
+      for more details.
+    </para>
+
+    <note>
+      <para>
+        It is not possible to perform a switchover where the demotion candidate is
+        running &repmgr; 4.0.2 or lower; all nodes should be upgraded to the latest version (4.0.4).
+        This is due to additional checks introduced in 4.0.3 which require the presence of
+        4.0.3 or later versions on all nodes.
+      </para>
+    </note>
+
+    <sect2>
+      <title>Usability enhancements</title>
+
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              add <command><link linkend="repmgr-standby-clone">repmgr standby clone --recovery-conf-only</link></command>
+              option to enable integration of a standby cloned from another source into a &repmgr; cluster (GitHub #382)
+            </para>
+          </listitem>
+
+         <listitem>
+            <para>
+              remove restriction on using replication slots when cloning from a Barman server (GitHub #379)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              make <command><link linkend="repmgr-standby-promote">repmgr standby promote</link></command>
+              timeout values configurable (GitHub #387)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              add missing options to main <literal>--help</literal> output (GitHub #391, #392)
+            </para>
+          </listitem>
+
+        </itemizedlist>
+      </para>
+
+    </sect2>
+
+    <sect2>
+      <title>Bug fixes</title>
+      <para>
+
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              ensure <command><link linkend="repmgr-node-rejoin">repmgr node rejoin</link></command>
+              honours the <option>--dry-run</option> option (GitHub #383)
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              improve replication slot warnings generated by
+              <command><link linkend="repmgr-node-status">repmgr node status</link></command>
+              (GitHub #385)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              fix --superuser handling when cloning a standby (GitHub #380)
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: improve detection of status change from primary to
+              standby
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>:  improve reconnection to the local node after a
+              failover (previously a connection error due to the node starting up was being
+              interpreted as the node being unavailable)
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: when running on a witness server, correctly connect
+              to new primary after a failover
+           </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <application>repmgrd</application>: add <link linkend="event-notifications">event notification</link>
+              <literal>repmgrd_shutdown</literal> (GitHub #393)
+           </para>
+          </listitem>
+
+        </itemizedlist>
+
+      </para>
+    </sect2>
+
+  </sect1>
+
+  <sect1 id="release-4.0.3">
+    <title>Release 4.0.3</title>
+    <para><emphasis>Thu Feb 15, 2018</emphasis></para>
+
+    <para>
+      &repmgr; 4.0.3 contains some bug fixes and and a number of
+      usability enhancements related to logging/diagnostics,
+      event notifications and pre-action checks.
+    </para>
+
+    <para>
+      This release can be installed as a simple package upgrade from repmgr 4.0 ~ 4.0.2;
+      repmgrd (if running) should be restarted.
+    </para>
+    <note>
+      <para>
+        It is not possible to perform a switchover where the demotion candidate is
+        running &repmgr; 4.0.2 or lower; all nodes should be upgraded to 4.0.3. This is due
+        to additional checks introduced in 4.0.3 which require the presence of
+        4.0.3 or later versions on all nodes.
+      </para>
+    </note>
+    <sect2>
+      <title>Usability enhancements</title>
+
+      <para>
+        <itemizedlist>
+
+          <listitem>
+            <para>
+              improve <command><link linkend="repmgr-standby-switchover">repmgr standby switchover</link></command>
+              behaviour when <command>pg_ctl</command> is used to control the server and logging output is
+              not explicitly redirected
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              improve <command><link linkend="repmgr-standby-switchover">repmgr standby switchover</link></command>
+              log messages and provide new exit code <literal>ERR_SWITCHOVER_INCOMPLETE</literal> when old primary could
+              not be shut down cleanly
+            </para>
+          </listitem>
+
+         <listitem>
+            <para>
+              add check to verify the demotion candidate can make a replication connection to the
+              promotion candidate before executing a switchover (GitHub #370)
+            </para>
+         </listitem>
+
+         <listitem>
+            <para>
+              add check for sufficient walsenders and replication slots on the promotion candidate  before executing
+              <command><link linkend="repmgr-standby-switchover">repmgr standby switchover</link></command>
+              (GitHub #371)
+            </para>
+         </listitem>
+
+          <listitem>
+            <para>
+              add --dry-run mode to <command><link linkend="repmgr-standby-switchover">repmgr standby follow</link></command>
+              (GitHub #368)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              provide information about the primary node for
+              <command><link linkend="repmgr-standby-register">repmgr standby register</link></command> and
+              <command><link linkend="repmgr-standby-follow">repmgr standby follow</link></command> event notifications (GitHub #375)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              add <literal>standby_register_sync</literal> <link linkend="event-notifications">event notification</link>, which is fired when
+              <command><link linkend="repmgr-standby-register">repmgr standby register</link></command>
+              is run with the <option>--wait-sync</option> option and the new or updated standby node
+              record has synchronised to the standby (GitHub #374)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              when running <command><link linkend="repmgr-cluster-show">repmgr cluster show</link></command>,
+              if any node is unreachable, output the error message encountered in the list of warnings
+              (GitHub #369)
+            </para>
+          </listitem>
+
+        </itemizedlist>
+      </para>
+    </sect2>
+
+    <sect2>
+      <title>Bug fixes</title>
+
+      <para>
+        <itemizedlist>
+          <listitem>
+            <para>
+              ensure an inactive data directory can be overwritten when
+              cloning a standby (GitHub #366)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-node-status">repmgr node status</link></command>
+              upstream node display fixed (GitHub #363)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-primary-unregister">repmgr primary unregister</link></command>:
+              clarify usage and fix <literal>--help</literal> output (GitHub #373)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              parsing of <varname>pg_basebackup_options</varname> fixed (GitHub #376)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              ensure the <filename>pg_subtrans</filename> directory is created when cloning a
+              standby in Barman mode
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              <command><link linkend="repmgr-witness-register">repmgr witness register</link></command>:
+              fix primary node check (GitHub #377).
+            </para>
+          </listitem>
+        </itemizedlist>
+
+      </para>
+    </sect2>
+
+  </sect1>
+
+
+  <sect1 id="release-4.0.2">
+    <title>Release 4.0.2</title>
+    <para><emphasis>Thu Jan 18, 2018</emphasis></para>
+
+    <para>
+      &repmgr; 4.0.2 contains some bug fixes and small usability enhancements.
+    </para>
+    <para>
+      This release can be installed as a simple package upgrade from &repmgr; 4.0.1 or 4.0;
+      <application>repmgrd</application> (if running) should be restarted.
+    </para>
+
+    <sect2>
+      <title>Usability enhancements</title>
+
+      <para>
+        <itemizedlist>
+          <listitem>
+            <para>
+              Recognize the <option>-t</option>/<option>--terse</option> option for
+              <command><link linkend="repmgr-cluster-event">repmgr cluster event</link></command> to hide
+              the <literal>Details</literal> column (GitHub #360)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Add "--wait-start" option for
+              <command><link linkend="repmgr-standby-register">repmgr standby register</link></command>
+              (GitHub #356)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Add <literal>%p</literal> <link linkend="event-notifications">event notification parameter</link>
+              for <command><link linkend="repmgr-standby-switchover">repmgr standby switchover</link></command>
+            </para>
+          </listitem>
+        </itemizedlist>
+      </para>
+
+    </sect2>
+
+    <sect2>
+      <title>Bug fixes</title>
+
+      <para>
+        <itemizedlist>
+          <listitem>
+            <para>
+              Add missing -W option to <literal>getopt_long()</literal> invocation (GitHub #350)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Automatically create slot name if missing (GitHub #343)
+            </para>
+          </listitem>
+
+          <listitem>
+            <para>
+              Fixes to parsing output of remote repmgr invocations (GitHub #349)
+            </para>
+          </listitem>
+
+
+          <listitem>
+            <para>
+              When registering BDR nodes, automatically create missing connection replication set (GitHub #347)
+            </para>
+          </listitem>
+
+
+          <listitem>
+            <para>
+              Handle missing node record in <command><link linkend="repmgr-node-rejoin">repmgr node rejoin</link></command>
+              (GitHub #358)
+            </para>
+          </listitem>
+
+
+        </itemizedlist>
+      </para>
+
+    </sect2>
+
+    <sect2>
+      <title>Documentation</title>
+
+      <para>
+        <itemizedlist>
+          <listitem>
+            <para>
+              The documentation can now be built as a single HTML file (GitHub pull request #353)
+            </para>
+          </listitem>
+        </itemizedlist>
+      </para>
+    </sect2>
+
+  </sect1>
+
+ <sect1 id="release-4.0.1">
+  <title>Release 4.0.1</title>
+
+  <para><emphasis>Wed Dec 13, 2017</emphasis></para>
+
+  <para>
+    &repmgr; 4.0.1 is a bugfix release.
+  </para>
+  <sect2>
+    <title>Bug fixes</title>
+    <para>
+      <itemizedlist>
+        <listitem>
+          <para>
+            ensure correct return codes are returned for
+            <command><link linkend="repmgr-node-check">repmgr node check --action=</link></command> operations
+            (GitHub #340)
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+            Fix <xref linkend="repmgr-cluster-show"> when <literal>repmgr</literal> schema not set in search path
+            (GitHub #341)
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+            When using <literal>--force-rewind</literal> with <xref linkend="repmgr-node-rejoin">
+            delete any replication slots copied by <application>pg_rewind</application>
+            (GitHub #334)
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+            Only perform sanity check on accessibility of configuration files outside
+            the data directory when <literal>--copy-external-config-files</literal>
+            provided (GitHub #342)
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+            Initialise "voting_term" table in application, not extension SQL
+            (GitHub #344)
+          </para>
+        </listitem>
+
+      </itemizedlist>
+    </para>
+  </sect2>
+ </sect1>
+
+
+
+ <sect1 id="release-4.0.0">
+  <title>Release 4.0.0</title>
+
+  <para><emphasis>Tue Nov 21, 2017</emphasis></para>
+
+  <para>
+    repmgr 4.0 is an entirely new version of &repmgr;, implementing &repmgr;
+    as a native PostgreSQL extension, adding new and improving existing features,
+    and making &repmgr; more user-friendly and intuitive to use. The new code base
+    will make it easier to add additional functionality for future releases.
+  </para>
+  <note>
+    <simpara>
+      With the new version, the opportunity has been taken to
+      make some changes in the way &repmgr; is set up and
+      configured. In particular changes have been made to some
+      configuration file settings consistency for and clarity.
+      Changes are covered in detail below
+    </simpara>
+    <simpara>
+      To standardise terminology, from this release <literal>primary</literal> is used to
+      denote the read/write node in a streaming replication cluster. <literal>master</literal>
+      is still accepted as an alias for &repmgr; commands
+      (e.g. <link linkend="repmgr-primary-register"><command>repmgr master register</command></link>).
+    </simpara>
+  </note>
+
+  <para>
+    For detailed instructions on upgrading from repmgr 3.x, see <xref linkend="upgrading-from-repmgr-3">.
+  </para>
+
+  <sect2>
+    <title>Features and improvements</title>
+    <para>
+
+      <itemizedlist>
+        <listitem>
+          <para>
+            <emphasis>improved switchover</emphasis>:
+            the <command>switchover</command> process has been improved and streamlined,
+            speeding up the switchover process and can also instruct other standbys
+            to follow the new primary once the switchover has completed. See
+             <xref linkend="performing-switchover"> for more details.
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+           <emphasis>"--dry-run" option</emphasis>: many &repmgr; commands now provide
+           a <literal>--dry-run</literal> option which will execute the command as far
+           as possible without making any changes, which will enable possible issues
+           to be identified before the intended operation is actually carried out.
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+            <emphasis>easier upgrades</emphasis>: &repmgr; is now implemented as a native
+            PostgreSQL extension, which means future upgrades can be carried out by
+            installing the upgraded package and issuing
+            <ulink url="https://www.postgresql.org/docs/current/sql-alterextension.html">ALTER EXTENSION repmgr UPDATE</ulink>.
+          </para>
+        </listitem>
+
+
+        <listitem>
+          <para>
+            <emphasis>improved logging output</emphasis>:
+            &repmgr; (and <application>repmgrd</application>) now provide more explicit
+            logging output giving a better picture of what is going on. Where appropriate,
+            <literal>DETAIL</literal> and <literal>HINT</literal> log lines provide additional
+            detail and suggestions for resolving problems. Additionally, <application>repmgrd</application>
+            now emits informational log lines at regular, configurable intervals
+            to confirm that it's running correctly and which node(s) it's monitoring.
+          </para>
+        </listitem>
+
+        <listitem>
+          <para>
+            <emphasis>automatic configuration file location in packages</emphasis>:
+            Many operating system packages place the &repmgr; configuration files
+            in a version-specific subdirectory, e.g. <filename>/etc/repmgr/9.6/repmgr.conf</filename>;
+            &repmgr; now makes it easy for package maintainers to provide a patch
+            with the actual file location, meaning <filename>repmgr.conf</filename>
+            does not need to be provided explicitly. This is currently the case
+            for 2ndQuadrant-provided <literal>.deb</literal> and <literal>.rpm</literal> packages.
+          </para>
+        </listitem>
+
+
+        <listitem>
+          <para>
+            <emphasis>monitoring and status checks</emphasis>:
+            New commands <xref linkend="repmgr-node-check"> and
+            <xref linkend="repmgr-node-status"> providing information
+            about a node's status and replication-related monitoring
+            output.
+          </para>
+        </listitem>
+
+
+        <listitem>
+          <para>
+            <emphasis>node rejoin</emphasis>:
+            New commands <xref linkend="repmgr-node-rejoin"> enables a failed
+            primary to be rejoined to a replication cluster, optionally using
+            <application>pg_rewind</application> to synchronise its data,
+            (note that <application>pg_rewind</application> may not be useable
+            in some circumstances).
+          </para>
+        </listitem>
+
+
+        <listitem>
+          <para>
+            <emphasis>automatic failover</emphasis>:
+            improved detection of node status; promotion decision based on a consensual
+            model, with the promoted primary explicitly informing other standbys to
+            follow it. The <application>repmgrd</application> daemon will continue
+            functioning even if the monitored PostgreSQL instance is down, and resume
+            monitoring if it reappears. Additionally, if the instance's role has changed
+            (typically from a primary to a standby, e.g. following reintegration of a
+            failed primary using <xref linkend="repmgr-node-rejoin">) <application>repmgrd</application>
+            will automatically resume monitoring it as a standby.
+          </para>
+        </listitem>
+
+
+
+        <listitem>
+          <para>
+            <emphasis>new documentation</emphasis>:
+            the existing documentation spread over multiple text files
+            has been consolidated into DocBook format (as used by the
+            main PostgreSQL project) and is now available online in
+            HTML format.
+          </para>
+          <para>
+            The DocBook files can easily be used to create versions
+            of the documentation in other formats such as PDF.
+          </para>
+        </listitem>
+
+      </itemizedlist>
+
+    </para>
+  </sect2>
+  <sect2>
+    <title>New command line options</title>
+    <para>
+      <itemizedlist>
+
+        <listitem><para>
+          <literal>--dry-run</literal>: &repmgr; will attempt to perform
+          the action as far as possible without making any changes to the
+          database
+        </para></listitem>
+
+        <listitem>
+          <para>
+            <literal>--upstream-node-id</literal>: use to specify the upstream node
+            the standby will connect later stream from, when <link linkend="repmgr-standby-clone">cloning</link>
+            and <link linkend="repmgr-standby-register">registering</link> a standby.
+          </para>
+          <para>
+            This replaces the configuration file parameter <varname>upstream_node</varname>.
+            as the upstream node is set when the standby is initially cloned, but can change
+            over the lifetime of an installation (due to failovers, switchovers etc.) so it's
+            pointless/confusing keeping the original value around in <filename>repmgr.conf</filename>.
+        </para></listitem>
+
+      </itemizedlist>
+    </para>
+  </sect2>
+
+  <sect2>
+    <title>Changed command line options</title>
+    <para>
+      <application>repmgr</application>
+      <itemizedlist>
+
+        <listitem><para>
+            <literal>--replication-user</literal> has been deprecated; it has been replaced
+            by the configuration file option <varname>replication_user</varname>.
+            The value (which defaults to the user provided in the <varname>conninfo</varname>
+            string) will be stored in the &repmgr; metadata for use by
+            <xref linkend="repmgr-standby-clone"> and <xref linkend="repmgr-standby-follow">.
+        </para></listitem>
+
+        <listitem><para>
+            <literal>--recovery-min-apply-delay</literal> is now a configuration file parameter
+            <varname>recovery_min_apply_delay</varname>, to ensure the setting does not get lost
+            when a standby follows a new upstream.
+        </para></listitem>
+
+        <listitem><para>
+            <literal>--no-conninfo-password</literal> is deprecated; a password included in
+            the environment variable <varname>PGPASSWORD</varname> will no longer be added
+            to <varname>primary_conninfo</varname> by default; to force the inclusion
+            of a password (not recommended), use the new configuration file parameter
+            <varname>use_primary_conninfo_password</varname>. For details, ee section
+            <xref linkend="cloning-advanced-managing-passwords">.
+        </para></listitem>
+
+      </itemizedlist>
+    </para>
+
+    <para>
+      <application>repmgrd</application>
+      <itemizedlist>
+
+        <listitem><para>
+            <literal>--monitoring-history</literal> is deprecated and is replaced by the
+            configuration file option <varname>monitoring_history</varname>.
+            This enables the setting to be changed without having to modify system service
+            files.
+        </para></listitem>
+
+      </itemizedlist>
+    </para>
+
+  </sect2>
+
+  <sect2>
+    <title>Configuration file changes</title>
+
+    <para><emphasis>Required settings</emphasis></para>
+    <para>The following 4 parameters are mandatory in <filename>repmgr.conf</filename>:
+      <itemizedlist spacing="compact" mark="bullet">
+
+        <listitem>
+          <simpara>node_id</simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>node_name</simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>conninfo</simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>data_directory</simpara>
+        </listitem>
+      </itemizedlist>
+    </para>
+
+   <para><emphasis>Renamed settings</emphasis></para>
+   <para>
+     Some settings have been renamed for clarity and consistency:
+     <itemizedlist spacing="compact" mark="bullet">
+
+       <listitem>
+         <simpara><varname>node</varname> is now <varname>node_id</varname></simpara>
+       </listitem>
+
+       <listitem>
+         <simpara><varname>name</varname> is now <varname>node_name</varname></simpara>
+       </listitem>
+
+       <listitem>
+         <simpara><varname>barman_server</varname> is now <varname>barman_host</varname></simpara>
+       </listitem>
+
+       <listitem>
+         <simpara><varname>master_reponse_timeout</varname> is now
+           <varname>async_query_timeout</varname> (to better indicate its purpose)
+         </simpara>
+       </listitem>
+
+     </itemizedlist>
+   </para>
+
+   <para>
+     The following configuration file parameters have been renamed for consistency
+     with other parameters (and conform to the pattern used by PostgreSQL itself,
+     which uses the prefix <varname>log_</varname> for logging parameters):
+
+    <itemizedlist spacing="compact" mark="bullet">
+
+      <listitem>
+        <simpara><varname>loglevel</varname> is now <varname>log_level</varname></simpara>
+      </listitem>
+
+      <listitem>
+        <simpara><varname>logfile</varname> is now <varname>log_file</varname></simpara>
+      </listitem>
+
+      <listitem>
+        <simpara><varname>logfacility</varname> is now <varname>log_facility</varname></simpara>
+      </listitem>
+
+    </itemizedlist>
+   </para>
+
+   <para><emphasis>Removed settings</emphasis></para>
+   <para>
+     <itemizedlist spacing="compact" mark="bullet">
+
+      <listitem>
+        <simpara><varname>cluster</varname> has been removed</simpara>
+      </listitem>
+      <listitem>
+        <simpara><varname>upstream_node</varname> - see note about
+          <literal>--upstream-node-id</literal> above</simpara>
+      </listitem>
+
+      <listitem>
+        <simpara><varname>retry_promote_interval_secs</varname>this is now redundant due
+          to changes in the failover/promotion mechanism; the new equivalent is
+          <varname>primary_notification_timeout</varname> </simpara>
+      </listitem>
+     </itemizedlist>
+   </para>
+
+   <para><emphasis>Logging changes</emphasis></para>
+   <para>
+     <itemizedlist spacing="compact" mark="bullet">
+
+      <listitem>
+        <simpara>
+          default value for <varname>log_level</varname> is <literal>INFO</literal>
+          rather than <literal>NOTICE</literal>.
+        </simpara>
+      </listitem>
+
+      <listitem>
+        <simpara>
+          new parameter <varname>log_status_interval</varname>, which causes
+          <application>repmgrd</application> to emit a status log
+          line at the specified interval
+        </simpara>
+      </listitem>
+
+     </itemizedlist>
+
+   </para>
+
+  </sect2>
+  <sect2>
+    <title>repmgrd</title>
+    <para>
+      The shared library has been renamed from <literal>repmgr_funcs</literal> to
+      <literal>repmgr</literal>,  meaning <varname>shared_preload_libraries</varname>
+      in <filename>postgresql.conf</filename> needs to be updated to the new name:
+      <programlisting>
+        shared_preload_libraries = 'repmgr'</programlisting>
+    </para>
+  </sect2>
+
+ </sect1>
+
+</appendix>

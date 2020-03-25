@@ -1,0 +1,199 @@
+<refentry id="repmgr-standby-promote">
+  <indexterm>
+    <primary>repmgr standby promote</primary>
+  </indexterm>
+
+  <refmeta>
+    <refentrytitle>repmgr standby promote</refentrytitle>
+  </refmeta>
+
+  <refnamediv>
+    <refname>repmgr standby promote</refname>
+    <refpurpose>promote a standby to a primary</refpurpose>
+  </refnamediv>
+
+  <refsect1>
+    <title>Description</title>
+    <para>
+      Promotes a standby to a primary if the current primary has failed. This
+      command requires a valid <filename>repmgr.conf</filename> file for the standby, either
+      specified explicitly  with <literal>-f/--config-file</literal> or located in a
+      default location; no additional arguments are required.
+    </para>
+    <para>
+      If the standby promotion succeeds, the server will not need to be
+      restarted. However any other standbys will need to follow the new server,
+      by using <xref linkend="repmgr-standby-follow">; if <application>repmgrd</application>
+        is active, it will handle this automatically.
+    </para>
+    <para>
+      Note that &repmgr; will wait for up to <varname>promote_check_timeout</varname> seconds
+      (default: 60 seconds) to verify that the standby has been promoted, and will
+      check the promotion every <varname>promote_check_interval</varname> seconds (default: 1 second).
+      Both values can be defined in <filename>repmgr.conf</filename>.
+    </para>
+
+    <note>
+      <para>
+        If WAL replay is paused on the standby, and not all WAL files on the standby have been
+        replayed, &repmgr; will not attempt to promote it.
+      </para>
+      <para>
+        This is because if WAL replay is paused, PostgreSQL itself will not react to a promote command
+        until WAL replay is resumed and all pending WAL has been replayed. This means
+        attempting to promote PostgreSQL in this state will leave PostgreSQL in a condition where the
+        promotion may occur at a unpredictable point in the future.
+      </para>
+      <para>
+        Note that if the standby is in archive recovery, &repmgr; will not be able to determine
+        if more WAL is pending replay, and will abort the promotion attempt if WAL replay is paused.
+      </para>
+    </note>
+
+  </refsect1>
+
+
+  <refsect1>
+    <title>Example</title>
+    <para>
+      <programlisting>
+      $ repmgr -f /etc/repmgr.conf standby promote
+      NOTICE: promoting standby to primary
+      DETAIL: promoting server "node2" (ID: 2) using "pg_ctl -l /var/log/postgres/startup.log -w -D '/var/lib/postgres/data' promote"
+      server promoting
+      DEBUG: setting node 2 as primary and marking existing primary as failed
+      NOTICE: STANDBY PROMOTE successful
+      DETAIL: server "node2" (ID: 2) was successfully promoted to primary</programlisting>
+    </para>
+  </refsect1>
+
+
+  <refsect1>
+    <title>Options</title>
+    <variablelist>
+      <varlistentry>
+        <term><option>--dry-run</option></term>
+        <listitem>
+          <para>
+            Check if this node can be promoted, but don't carry out the promotion
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>Configuration file settings</title>
+   <para>
+     The following parameters in <filename>repmgr.conf</filename> are relevant to the
+     promote operation:
+    </para>
+
+    <para>
+      <itemizedlist spacing="compact" mark="bullet">
+
+       <listitem>
+        <indexterm>
+          <primary>promote_check_interval</primary>
+          <secondary>with &quot;repmgr standby promote &quot;</secondary>
+        </indexterm>
+         <simpara>
+           <literal>promote_check_interval</literal>:
+           interval (in seconds, default: 1 second) to wait between each check
+           to determine whether the standby has been promoted.
+		 </simpara>
+	   </listitem>
+
+       <listitem>
+        <indexterm>
+          <primary>promote_check_timeout</primary>
+          <secondary>with &quot;repmgr standby promote &quot;</secondary>
+        </indexterm>
+         <simpara>
+           <literal>promote_check_timeout</literal>:
+           time (in seconds, default: 60 seconds) to wait to verify that the standby has been promoted
+           before exiting with <literal>ERR_PROMOTION_FAIL</literal>.
+		 </simpara>
+	   </listitem>
+
+	  </itemizedlist>
+	</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Exit codes</title>
+    <para>
+      Following exit codes can be emitted by <command>repmgr standby promote</command>:
+    </para>
+    <variablelist>
+      <varlistentry>
+        <term><option>SUCCESS (0)</option></term>
+        <listitem>
+          <para>
+            The standby was successfully promoted to primary.
+          </para>
+        </listitem>
+      </varlistentry>
+
+     <varlistentry>
+        <term><option>ERR_DB_CONN (6)</option></term>
+        <listitem>
+          <para>
+            &repmgr; was unable to connect to the local PostgreSQL node.
+          </para>
+          <para>
+            PostgreSQL must be running before the node can be promoted.
+          </para>
+        </listitem>
+      </varlistentry>
+
+     <varlistentry>
+       <term><option>ERR_PROMOTION_FAIL (8)</option></term>
+        <listitem>
+          <para>
+            The node could not be promoted to primary for one of the following
+            reasons:
+            <itemizedlist spacing="compact" mark="bullet">
+
+              <listitem>
+                <simpara>
+                  there is an existing primary node in the replication cluster
+                </simpara>
+              </listitem>
+
+              <listitem>
+                <simpara>
+                  the node is not a standby
+                </simpara>
+              </listitem>
+
+              <listitem>
+                <simpara>
+                  WAL replay is paused on the node
+                </simpara>
+              </listitem>
+
+              <listitem>
+                <simpara>
+                  execution of the PostgreSQL promote command failed
+                </simpara>
+              </listitem>
+
+            </itemizedlist>
+          </para>
+        </listitem>
+     </varlistentry>
+
+    </variablelist>
+  </refsect1>
+
+
+  <refsect1 id="repmgr-standby-promote-events">
+    <title>Event notifications</title>
+    <para>
+      A <literal>standby_promote</literal> <link linkend="event-notifications">event notification</link> will be generated.
+    </para>
+  </refsect1>
+
+</refentry>

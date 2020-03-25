@@ -1,0 +1,64 @@
+AC_INIT([repmgr], [4.3], [repmgr@googlegroups.com], [repmgr], [https://repmgr.org/])
+
+AC_COPYRIGHT([Copyright (c) 2010-2019, 2ndQuadrant Ltd.])
+
+AC_CONFIG_HEADER(config.h)
+
+AC_ARG_VAR([PG_CONFIG], [Location to find pg_config for target PostgreSQL (default PATH)])
+
+AC_PROG_SED
+
+if test -z "$PG_CONFIG"; then
+  AC_PATH_PROG(PG_CONFIG, pg_config)
+fi
+
+if test -z "$PG_CONFIG"; then
+   AC_MSG_ERROR([could not find pg_config, set PG_CONFIG or PATH])
+fi
+
+pgac_pg_config_version=$($PG_CONFIG --version 2>/dev/null)
+
+major_version_num=$(echo "$pgac_pg_config_version"|
+              $SED -e 's/^PostgreSQL \([[0-9]]\{1,2\}\).*$/\1/')
+
+if test "$major_version_num" -lt '10'; then
+    version_num=$(echo "$pgac_pg_config_version"|
+                $SED -e 's/^PostgreSQL \([[0-9]]*\)\.\([[0-9]]*\)\([[a-zA-Z0-9.]]*\)$/\1.\2/')
+
+    if test -z "$version_num"; then
+        AC_MSG_ERROR([could not detect the PostgreSQL version, wrong or broken pg_config?])
+    fi
+
+    version_num_int=$(echo "$version_num"|
+                    $SED -e 's/^\([[0-9]]*\)\.\([[0-9]]*\)$/\1\2/')
+
+    if test "$version_num_int" -lt '93'; then
+        AC_MSG_ERROR([repmgr is not compatible with detected PostgreSQL version: $version_num])
+    fi
+else
+    version_num=$(echo "$pgac_pg_config_version"|
+                $SED -e 's/^PostgreSQL \(.\+\)$/\1/')
+
+    if test -z "$version_num"; then
+        AC_MSG_ERROR([could not detect the PostgreSQL version, wrong or broken pg_config?])
+    fi
+fi
+
+AC_MSG_NOTICE([building against PostgreSQL $version_num])
+
+# add includedir to prerequisites, so tests for headers can succeed
+CPPFLAGS="-I$($PG_CONFIG --includedir-server) $CFLAGS"
+
+# check whether we're building inside the source tree.
+if test "$srcdir" -ef '.' ; then
+  vpath_build=no
+else
+  vpath_build=yes
+fi
+AC_SUBST(vpath_build)
+
+AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile.global])
+AC_CONFIG_FILES([doc/Makefile])
+AC_OUTPUT
+

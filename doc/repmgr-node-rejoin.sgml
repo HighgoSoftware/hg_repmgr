@@ -1,0 +1,387 @@
+<refentry id="repmgr-node-rejoin">
+
+  <indexterm>
+    <primary>repmgr node rejoin</primary>
+  </indexterm>
+
+  <refmeta>
+    <refentrytitle>repmgr node rejoin</refentrytitle>
+  </refmeta>
+
+  <refnamediv>
+    <refname>repmgr node rejoin</refname>
+    <refpurpose>rejoin a dormant (stopped) node to the replication cluster</refpurpose>
+  </refnamediv>
+
+  <refsect1>
+    <title>Description</title>
+    <para>
+      Enables a dormant (stopped) node to be rejoined to the replication cluster.
+    </para>
+    <para>
+      This can optionally use <application>pg_rewind</application> to re-integrate
+      a node which has diverged from the rest of the cluster, typically a failed primary.
+    </para>
+
+    <tip>
+      <para>
+        If the node is running and needs to be attached to the current primary, use
+        <xref linkend="repmgr-standby-follow">.
+      </para>
+      <para>
+        Note <xref linkend="repmgr-standby-follow"> can only be used for standbys which have not diverged
+        from the rest of the cluster.
+      </para>
+    </tip>
+  </refsect1>
+
+
+  <refsect1>
+    <title>Usage</title>
+
+    <para>
+      <programlisting>
+      repmgr node rejoin -d '$conninfo'</programlisting>
+
+      where <literal>$conninfo</literal> is the conninfo string of any reachable node in the cluster.
+      <filename>repmgr.conf</filename> for the stopped node *must* be supplied explicitly if not
+      otherwise available.
+    </para>
+  </refsect1>
+
+  <refsect1>
+
+    <title>Options</title>
+    <variablelist>
+
+      <varlistentry>
+        <term><option>--dry-run</option></term>
+        <listitem>
+          <para>
+            Check prerequisites but don't actually execute the rejoin.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--force-rewind[=/path/to/pg_rewind]</option></term>
+        <listitem>
+          <para>
+            Execute <application>pg_rewind</application>.
+          </para>
+          <para>
+            It is only necessary to provide the <application>pg_rewind</application> path
+            if using PostgreSQL 9.3 or 9.4, and <application>pg_rewind</application>
+            is not installed in the PostgreSQL <filename>bin</filename> directory.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--config-files</option></term>
+        <listitem>
+          <para>
+            comma-separated list of configuration files to retain after
+            executing <application>pg_rewind</application>.
+          </para>
+          <para>
+            Currently <application>pg_rewind</application> will overwrite
+            the local node's configuration files with the files from the source node,
+            so it's advisable to use this option to ensure they are kept.
+          </para>
+        </listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+        <term><option>--config-archive-dir</option></term>
+        <listitem>
+          <para>
+            Directory to temporarily store configuration files specified with
+            <option>--config-files</option>; default: <filename>/tmp</filename>.
+          </para>
+        </listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+        <term><option>-W/--no-wait</option></term>
+        <listitem>
+          <para>
+            Don't wait for the node to rejoin cluster.
+          </para>
+          <para>
+            If this option is supplied, &repmgr; will restart the node but
+            not wait for it to connect to the primary.
+          </para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>Configuration file settings</title>
+
+    <para>
+      <itemizedlist spacing="compact" mark="bullet">
+       <listitem>
+         <simpara>
+           <literal>node_rejoin_timeout</literal>:
+		   the maximum length of time (in seconds) to wait for
+		   the node to reconnect to the replication cluster (defaults to
+		   the value set in <literal>standby_reconnect_timeout</literal>,
+		   60 seconds).
+		 </simpara>
+         <simpara>
+           Note that <literal>standby_reconnect_timeout</literal> must be
+           set to a value equal to or greater than
+           <literal>node_rejoin_timeout</literal>.
+         </simpara>
+	   </listitem>
+	  </itemizedlist>
+	</para>
+
+  </refsect1>
+
+  <refsect1 id="repmgr-node-rejoin-events">
+    <title>Event notifications</title>
+    <para>
+      A <literal>node_rejoin</literal> <link linkend="event-notifications">event notification</link> will be generated.
+    </para>
+  </refsect1>
+  <refsect1>
+    <title>Exit codes</title>
+    <para>
+      One of the following exit codes will be emitted by <command>repmgr node rejoin</command>:
+    </para>
+
+    <variablelist>
+
+      <varlistentry>
+        <term><option>SUCCESS (0)</option></term>
+        <listitem>
+          <para>
+            The node rejoin succeeded; or if <option>--dry-run</option> was provided,
+            no issues were detected which would prevent the node rejoin.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_BAD_CONFIG (1)</option></term>
+        <listitem>
+          <para>
+            A configuration issue was detected which prevented &repmgr; from
+            continuing with the node rejoin.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_NO_RESTART (4)</option></term>
+        <listitem>
+          <para>
+            The node could not be restarted.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_REJOIN_FAIL (24)</option></term>
+        <listitem>
+          <para>
+            The node rejoin operation failed.
+          </para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Notes</title>
+    <para>
+      Currently <command>repmgr node rejoin</command> can only be used to attach
+      a standby to the current primary, not another standby.
+    </para>
+    <para>
+      The node must have been shut down cleanly; if this was not the case, it will
+      need to be manually started (remove any existing <filename>recovery.conf</filename> file first)
+      until it has reached a consistent recovery point, then shut down cleanly.
+    </para>
+    <tip>
+      <para>
+        If <application>PostgreSQL</application> is started in single-user mode and
+        input is directed from <filename>/dev/null/</filename>, it will perform recovery
+        then immediately quit, and will then be in a state suitable for use by
+        <application>pg_rewind</application>.
+        <programlisting>
+          rm -f /var/lib/pgsql/data/recovery.conf
+          postgres --single -D /var/lib/pgsql/data/ &lt; /dev/null</programlisting>
+      </para>
+    </tip>
+    <para>
+      &repmgr; will attempt to verify whether the node can rejoin as-is, or whether
+      <command>pg_rewind</command> must be used (see following section).
+    </para>
+  </refsect1>
+
+  <refsect1 id="repmgr-node-rejoin-pg-rewind" xreflabel="Using pg_rewind">
+
+   <indexterm>
+      <primary>pg_rewind</primary>
+      <secondary>using with "repmgr node rejoin"</secondary>
+    </indexterm>
+
+    <title>Using <command>pg_rewind</command></title>
+    <para>
+      <command>repmgr node rejoin</command> can optionally use <command>pg_rewind</command> to re-integrate a
+      node which has diverged from the rest of the cluster, typically a failed primary.
+      <command>pg_rewind</command> is available in PostgreSQL 9.5 and later as part of the core distribution,
+      and can be installed from external sources for PostgreSQL 9.3 and 9.4.
+    </para>
+    <note>
+      <para>
+        <command>pg_rewind</command> <emphasis>requires</emphasis> that either
+        <varname>wal_log_hints</varname> is enabled, or that
+        data checksums were enabled when the cluster was initialized. See the
+        <ulink url="https://www.postgresql.org/docs/current/app-pgrewind.html"><command>pg_rewind</command> documentation</ulink> for details.
+      </para>
+    </note>
+
+    <para>
+      We strongly recommend familiarizing yourself with <command>pg_rewind</command> before attempting
+      to use it with &repmgr;, as while it is an extremely useful tool, it is <emphasis>not</emphasis>
+      a &quot;magic bullet&quot; which can resolve all problematic replication situations.
+    </para>
+
+    <para>
+      A typical use-case for <command>pg_rewind</command> is when a scenario like the following
+      is encountered:
+      <programlisting>
+    $ repmgr node rejoin -f /etc/repmgr.conf -d 'host=node3 dbname=repmgr user=repmgr' \
+        --force-rewind --config-files=postgresql.local.conf,postgresql.conf --verbose --dry-run
+    INFO: replication connection to the rejoin target node was successful
+    INFO: local and rejoin target system identifiers match
+    DETAIL: system identifier is 6652184002263212600
+    ERROR: this node cannot attach to rejoin target node 3
+    DETAIL: rejoin target server's timeline 2 forked off current database system timeline 1 before current recovery point 0/610D710
+    HINT: use --force-rewind to execute pg_rewind</programlisting>
+
+      Here, <literal>node3</literal> was promoted to a primary while the local node was
+      still attached to the previous primary; this can potentially happen during e.g. a
+      network split. <command>pg_rewind</command> can re-sync the local node with <literal>node3</literal>,
+      removing the need for a full reclone.
+    </para>
+
+    <para>
+      To have <command>repmgr node rejoin</command> use <command>pg_rewind</command>,
+      pass the command line option <literal>--force-rewind</literal>, which will tell &repmgr;
+      to execute <command>pg_rewind</command> to ensure the node can be rejoined successfully.
+    </para>
+
+    <important>
+      <para>
+        Be aware that if <command>pg_rewind</command> is executed and actually performs a
+        rewind operation, any configuration files in the PostgreSQL data directory will be
+        overwritten with those from the source server.
+      </para>
+      <para>
+        To prevent this happening, provide a comma-separated list of files to retain
+        using the <literal>--config-file</literal> command line option; the specified files
+        will be archived in a temporary directory (whose parent directory can be specified with
+        <literal>--config-archive-dir</literal>) and restored once the rewind operation is
+        complete.
+      </para>
+    </important>
+
+    <para>
+      Example, first using <literal>--dry-run</literal>, then actually executing the
+      <literal>node rejoin command</literal>.
+    <programlisting>
+    $ repmgr node rejoin -f /etc/repmgr.conf -d 'host=node3 dbname=repmgr user=repmgr' \
+        --config-files=postgresql.local.conf,postgresql.conf --verbose --force-rewind --dry-run
+    INFO: replication connection to the rejoin target node was successful
+    INFO: local and rejoin target system identifiers match
+    DETAIL: system identifier is 6652460429293670710
+    NOTICE: pg_rewind execution required for this node to attach to rejoin target node 3
+    DETAIL: rejoin target server's timeline 2 forked off current database system timeline 1 before current recovery point 0/610D710
+    INFO: prerequisites for using pg_rewind are met
+    INFO: file "postgresql.local.conf" would be copied to "/tmp/repmgr-config-archive-node2/postgresql.local.conf"
+    INFO: file "postgresql.replication-setup.conf" would be copied to "/tmp/repmgr-config-archive-node2/postgresql.replication-setup.conf"
+    INFO: pg_rewind would now be executed
+    DETAIL: pg_rewind command is:
+      pg_rewind -D '/var/lib/postgresql/data' --source-server='host=node3 dbname=repmgr user=repmgr'
+    INFO: prerequisites for executing NODE REJOIN are met</programlisting>
+
+    <note>
+      <para>
+        If <option>--force-rewind</option> is used with the <option>--dry-run</option> option,
+        this checks the prerequisites for using <application>pg_rewind</application>, but is
+        not an absolute guarantee that actually executing <application>pg_rewind</application>
+        will succeed. See also section <xref linkend="repmgr-node-rejoin-caveats"> below.
+      </para>
+
+    </note>
+
+    <programlisting>
+    $ repmgr node rejoin -f /etc/repmgr.conf -d 'host=node3 dbname=repmgr user=repmgr' \
+        --config-files=postgresql.local.conf,postgresql.conf --verbose --force-rewind
+    NOTICE: pg_rewind execution required for this node to attach to rejoin target node 3
+    DETAIL: rejoin target server's timeline 2 forked off current database system timeline 1 before current recovery point 0/610D710
+    NOTICE: executing pg_rewind
+    DETAIL: pg_rewind command is "pg_rewind -D '/var/lib/postgresql/data' --source-server='host=node3 dbname=repmgr user=repmgr'"
+    NOTICE: 2 files copied to /var/lib/postgresql/data
+    NOTICE: setting node 2's upstream to node 3
+    NOTICE: starting server using "pg_ctl -l /var/log/postgres/startup.log -w -D '/var/lib/pgsql/data' start"
+    NOTICE: NODE REJOIN successful
+    DETAIL: node 2 is now attached to node 3</programlisting>
+    </para>
+
+  </refsect1>
+
+  <refsect1 id="repmgr-node-rejoin-caveats" xreflabel="Caveats">
+
+   <indexterm>
+      <primary>repmgr node rejoin</primary>
+      <secondary>caveats</secondary>
+    </indexterm>
+
+   <title>Caveats when using <command>repmgr node rejoin</command></title>
+   <para>
+     <command>repmgr node rejoin</command> attempts to determine whether it will succeed by
+     comparing the timelines and relative WAL positions of the local node (rejoin candidate) and primary
+     (rejoin target). This is particularly important if planning to use <application>pg_rewind</application>,
+     which currently (as of PostgreSQL 11) may appear to succeed (or indicate there is no action
+     needed) but potentially allow an impossible action, such as trying to rejoin a standby to a
+     primary which is behind the standby. &repmgr; will prevent this situation from occurring.
+   </para>
+   <para>
+     Currently it is <emphasis>not</emphasis> possible to detect a situation where the rejoin target
+     is a standby which has been &quot;promoted&quot; by removing <filename>recovery.conf</filename>
+     (PostgreSQL 12 and later: <filename>standby.signal</filename>) and restarting it.
+     In this case there will be no information about the point the rejoin target diverged
+     from the current standby; the rejoin operation will fail and
+     the current standby's PostgreSQL log will contain entries with the text
+     &quot;<literal>record with incorrect prev-link</literal>&quot;.
+   </para>
+   <para>
+     We strongly recommend running <command>repmgr node rejoin</command> with the
+     <option>--dry-run</option> option first. Additionally it might be a good idea
+     to execute the <application>pg_rewind</application> command displayed by
+     &repmgr; with the <application>pg_rewind</application> <option>--dry-run</option>
+     option. Note that <application>pg_rewind</application> does not indicate that it
+     is running in <option>--dry-run</option> mode.
+   </para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+    <para>
+     <xref linkend="repmgr-standby-follow">
+    </para>
+  </refsect1>
+</refentry>

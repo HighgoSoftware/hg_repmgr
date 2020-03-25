@@ -1,0 +1,971 @@
+<chapter id="repmgrd-configuration">
+
+  <indexterm>
+    <primary>repmgrd</primary>
+    <secondary>configuration</secondary>
+  </indexterm>
+
+  <title>repmgrd setup and configuration</title>
+
+  <para>
+    <application>repmgrd</application> is a daemon which runs on each PostgreSQL node,
+    monitoring the local node, and (unless it's the primary node) the upstream server
+    (the primary server or with cascading replication, another standby) which it's
+    connected to.
+  </para>
+  <para>
+    <application>repmgrd</application> can be configured to provide failover
+    capability in case the primary upstream node becomes unreachable, and/or
+    provide monitoring data to the &repmgr; metadatabase.
+  </para>
+
+  <sect1 id="repmgrd-basic-configuration">
+    <title>repmgrd configuration</title>
+
+    <para>
+      To use <application>repmgrd</application>, its associated function library <emphasis>must</emphasis> be
+      included via <filename>postgresql.conf</filename> with:
+
+      <programlisting>
+        shared_preload_libraries = 'repmgr'</programlisting>
+    </para>
+    <para>
+      Changing this setting requires a restart of PostgreSQL; for more details see
+      the <ulink url="https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-SHARED-PRELOAD-LIBRARIES">PostgreSQL documentation</ulink>.
+    </para>
+
+    <para>
+      The following configuraton options apply to <application>repmgrd</application> in all circumstances:
+    </para>
+    <variablelist>
+
+        <varlistentry>
+
+         <indexterm>
+            <primary>monitor_interval_secs</primary>
+          </indexterm>
+          <term><option>monitor_interval_secs</option></term>
+          <listitem>
+            <para>
+              The interval (in seconds, default: <literal>2</literal>) to check the availability of the upstream node.
+            </para>
+          </listitem>
+
+        </varlistentry>
+
+        <varlistentry id="connection-check-type">
+
+          <indexterm>
+            <primary>connection_check_type</primary>
+          </indexterm>
+          <term><option>connection_check_type</option></term>
+          <listitem>
+            <para>
+              The option <option>connection_check_type</option> is used to select the method
+              <application>repmgrd</application> uses to determine whether the upstream node is available.
+            </para>
+            <para>
+              Possible values are:
+              <itemizedlist spacing="compact" mark="bullet">
+                <listitem>
+                  <simpara>
+                    <literal>ping</literal> (default) - uses <command>PQping()</command> to
+                    determine server availability
+                  </simpara>
+                </listitem>
+                <listitem>
+                  <simpara>
+                    <literal>connection</literal> - determines server availability
+                    by attempt ingto make a new connection to the upstream node
+                  </simpara>
+                </listitem>
+                <listitem>
+                  <simpara>
+                    <literal>query</literal> - determines server availability
+                    by executing an SQL statement on the node via the existing connection
+                  </simpara>
+                </listitem>
+
+              </itemizedlist>
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+         <indexterm>
+            <primary>reconnect_attempts</primary>
+          </indexterm>
+          <term><option>reconnect_attempts</option></term>
+          <listitem>
+            <para>
+              The number of attempts (default: <literal>6</literal>) will be made to reconnect to an unreachable
+	      upstream node before initiating a failover.
+            </para>
+            <para>
+              There will be an interval of <option>reconnect_interval</option> seconds between each reconnection
+              attempt.
+            </para>
+          </listitem>
+        </varlistentry>
+        <varlistentry>
+         <indexterm>
+            <primary>reconnect_interval</primary>
+          </indexterm>
+          <term><option>reconnect_interval</option></term>
+          <listitem>
+            <para>
+              Interval (in seconds, default: <literal>10</literal>) between attempts to reconnect to an unreachable
+              upstream node.
+            </para>
+            <para>
+              The number of reconnection attempts is defined by the parameter <option>reconnect_attempts</option>.
+            </para>
+          </listitem>
+        </varlistentry>
+
+
+
+        <varlistentry>
+          <indexterm>
+            <primary>degraded_monitoring_timeout</primary>
+          </indexterm>
+          <term><option>degraded_monitoring_timeout</option></term>
+          <listitem>
+	    <para>
+              Interval (in seconds) after which <application>repmgrd</application> will terminate if
+              either of the servers (local node and or upstream node) being monitored is no longer available
+              (<link linkend="repmgrd-degraded-monitoring">degraded monitoring mode</link>).
+            </para>
+            <para>
+              <literal>-1</literal> (default) disables this timeout completely.
+            </para>
+	  </listitem>
+	</varlistentry>
+
+    </variablelist>
+
+      <para>
+        See also <filename><ulink url="https://raw.githubusercontent.com/2ndQuadrant/repmgr/master/repmgr.conf.sample">repmgr.conf.sample</ulink></filename> for an annotated sample configuration file.
+      </para>
+
+    <sect2 id="repmgrd-automatic-failover-configuration">
+      <title>Required configuration for automatic failover</title>
+
+      <para>
+        The following <application>repmgrd</application> options <emphasis>must</emphasis> be set in
+        <filename>repmgr.conf</filename>:
+
+        <itemizedlist spacing="compact" mark="bullet">
+          <listitem>
+            <simpara><option>failover</option></simpara>
+          </listitem>
+          <listitem>
+            <simpara><option>promote_command</option></simpara>
+          </listitem>
+          <listitem>
+            <simpara><option>follow_command</option></simpara>
+          </listitem>
+        </itemizedlist>
+      </para>
+
+
+      <para>
+        Example:
+        <programlisting>
+          failover=automatic
+          promote_command='/usr/bin/repmgr standby promote -f /etc/repmgr.conf --log-to-file'
+          follow_command='/usr/bin/repmgr standby follow -f /etc/repmgr.conf --log-to-file --upstream-node-id=%n'</programlisting>
+      </para>
+      <para>
+        Details of each option are as follows:
+      </para>
+      <variablelist>
+        <varlistentry>
+
+          <indexterm>
+            <primary>failover</primary>
+          </indexterm>
+          <term><option>failover</option></term>
+          <listitem>
+            <para>
+              <option>failover</option> can be one of <literal>automatic</literal> or <literal>manual</literal>.
+            </para>
+            <note>
+              <para>
+                If <option>failover</option> is set to <literal>manual</literal>, <application>repmgrd</application>
+                will not take any action if a failover situation is detected, and the node may need to
+                be modified manually (e.g. by executing <command><link linkend="repmgr-standby-follow">repmgr standby follow</link></command>).
+              </para>
+            </note>
+
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <indexterm>
+            <primary>promote_command</primary>
+          </indexterm>
+          <term><option>promote_command</option></term>
+          <listitem>
+            <para>
+              The program or script defined in <option>promote_command</option> will be executed
+              in a failover situation when <application>repmgrd</application> determines that
+              the current node is to become the new primary node.
+            </para>
+            <para>
+              Normally <option>promote_command</option> is set as &repmgr;'s
+              <command><link linkend="repmgr-standby-promote">repmgr standby promote</link></command> command.
+            </para>
+            <para>
+              It is also possible to provide e.g. a shell script to e.g. perform user-defined tasks
+              before promoting the current node. In this case the script <emphasis>must</emphasis>
+              at some point execute <command><link linkend="repmgr-standby-promote">repmgr standby promote</link></command>
+              to promote the node; if this is not done, &repmgr; metadata will not be updated and
+              &repmgr; will no longer function reliably.
+            </para>
+            <para>
+              Example:
+              <programlisting>
+                promote_command='/usr/bin/repmgr standby promote -f /etc/repmgr.conf --log-to-file'</programlisting>
+            </para>
+
+            <para>
+              Note that the <literal>--log-to-file</literal> option will cause
+              output generated by the &repmgr; command, when executed by <application>repmgrd</application>,
+              to be logged to the same destination configured to receive log output for <application>repmgrd</application>.
+            </para>
+            <note>
+              <para>
+                &repmgr; will not apply <option>pg_bindir</option> when executing <option>promote_command</option>
+                or <option>follow_command</option>; these can be user-defined scripts so must always be
+                specified with the full path.
+              </para>
+            </note>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <indexterm>
+            <primary>follow_command</primary>
+          </indexterm>
+          <term><option>follow_command</option></term>
+          <listitem>
+            <para>
+              The program or script defined in <option>follow_command</option> will be executed
+              in a failover situation when <application>repmgrd</application> determines that
+              the current node is to follow the new primary node.
+            </para>
+            <para>
+              Normally <option>follow_command</option> is set as &repmgr;'s
+              <command><link linkend="repmgr-standby-follow">repmgr standby promote</link></command> command.
+            </para>
+            <para>
+              The <option>follow_command</option> parameter
+              should provide the <literal>--upstream-node-id=%n</literal>
+              option to <command>repmgr standby follow</command>; the <literal>%n</literal> will be replaced by
+              <application>repmgrd</application> with the ID of the new primary node. If this is not provided,
+              <command>repmgr standby follow</command> will attempt to determine the new primary by itself, but if the
+              original primary comes back online after the new primary is promoted, there is a risk that
+              <command>repmgr standby follow</command> will result in the node continuing to follow
+              the original primary.
+            </para>
+            <para>
+              It is also possible to provide e.g. a shell script to e.g. perform user-defined tasks
+              before promoting the current node. In this case the script <emphasis>must</emphasis>
+              at some point execute <command><link linkend="repmgr-standby-follow">repmgr standby follow</link></command>
+              to promote the node; if this is not done, &repmgr; metadata will not be updated and
+              &repmgr; will no longer function reliably.
+            </para>
+            <para>
+              Example:
+              <programlisting>
+          follow_command='/usr/bin/repmgr standby follow -f /etc/repmgr.conf --log-to-file --upstream-node-id=%n'</programlisting>
+            </para>
+
+            <para>
+              Note that the <literal>--log-to-file</literal> option will cause
+              output generated by the &repmgr; command, when executed by <application>repmgrd</application>,
+              to be logged to the same destination configured to receive log output for <application>repmgrd</application>.
+            </para>
+            <note>
+              <para>
+                &repmgr; will not apply <option>pg_bindir</option> when executing <option>promote_command</option>
+                or <option>follow_command</option>; these can be user-defined scripts so must always be
+                specified with the full path.
+              </para>
+            </note>
+          </listitem>
+
+        </varlistentry>
+
+      </variablelist>
+
+
+    </sect2>
+
+    <sect2 id="repmgrd-automatic-failover-configuration-optional">
+      <title>Optional configuration for automatic failover</title>
+
+      <para>
+        The following configuraton options can be use to fine-tune automatic failover:
+      </para>
+      <variablelist>
+
+        <varlistentry>
+          <indexterm>
+            <primary>priority</primary>
+          </indexterm>
+          <term><option>priority</option></term>
+          <listitem>
+            <para>
+              Indicates a preferred priority (default: <literal>100</literal>) for promoting nodes;
+			  a value of zero prevents the node being promoted to primary.
+            </para>
+            <para>
+              Note that the priority setting is only applied if two or more nodes are
+              determined as promotion candidates; in that case the node with the
+              higher priority is selected.
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <indexterm>
+            <primary>failover_validation_command</primary>
+          </indexterm>
+          <term><option>failover_validation_command</option></term>
+          <listitem>
+            <para>
+              User-defined script to execute for an external mechanism to validate the failover
+	      decision made by <application>repmgrd</application>.
+            </para>
+            <note>
+              <para>
+                This option <emphasis>must</emphasis> be identically configured
+                on all nodes.
+              </para>
+            </note>
+            <para>
+              One or both of the following parameter placeholders
+			  should be provided, which will be replaced by repmgrd with the appropriate
+	          value:
+              <itemizedlist spacing="compact" mark="bullet">
+                <listitem>
+                  <simpara><literal>%n</literal>: node ID</simpara>
+                </listitem>
+                <listitem>
+                  <simpara><literal>%a</literal>: node name</simpara>
+                </listitem>
+              </itemizedlist>
+            </para>
+            <para>
+              See also: <link linkend="repmgrd-failover-validation">Failover validation</link>.
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+
+         <indexterm>
+            <primary>standby_disconnect_on_failover</primary>
+          </indexterm>
+          <term><option>standby_disconnect_on_failover</option></term>
+          <listitem>
+            <para>
+              In a failover situation, disconnect the local node's WAL receiver.
+            </para>
+            <para>
+              This option is available from PostgreSQL 9.5 and later.
+            </para>
+            <note>
+              <para>
+                This option <emphasis>must</emphasis> be identically configured
+                on all nodes.
+              </para>
+              <para>
+                Additionally the &repmgr; user <emphasis>must</emphasis> be a superuser
+                for this option.
+              </para>
+              <para>
+                <application>repmgrd</application> will refuse to start if this option is set
+                but either of these prerequisites is not met.
+              </para>
+            </note>
+
+            <para>
+              See also: <link linkend="repmgrd-standby-disconnection-on-failover">Standby disconnection on failover</link>.
+            </para>
+          </listitem>
+        </varlistentry>
+
+      </variablelist>
+
+      <para>
+        The following options can be used to further fine-tune failover behaviour.
+        In practice it's unlikely these will need to be changed from their default
+        values, but are available as configuration options should the need arise.
+      </para>
+      <variablelist>
+
+        <varlistentry>
+          <indexterm>
+            <primary>election_rerun_interval</primary>
+          </indexterm>
+          <term><option>election_rerun_interval</option></term>
+          <listitem>
+			<para>
+			  If <option>failover_validation_command</option> is set, and the command returns
+			  an error, pause the specified amount of seconds (default: 15) before rerunning the election.
+			</para>
+		  </listitem>
+		</varlistentry>
+
+
+        <varlistentry>
+          <indexterm>
+            <primary>sibling_nodes_disconnect_timeout</primary>
+          </indexterm>
+          <term><option>sibling_nodes_disconnect_timeout</option></term>
+          <listitem>
+			<para>
+              If <option>standby_disconnect_on_failover</option> is <literal>true</literal>, the
+              maximum length of time (in seconds, default: <literal>30</literal>)
+			  to wait for other standbys to confirm they have disconnected their
+		      WAL receivers.
+			</para>
+		  </listitem>
+		</varlistentry>
+      </variablelist>
+
+
+
+    </sect2>
+
+    <sect2 id="postgresql-service-configuration">
+      <indexterm>
+        <primary>repmgrd</primary>
+        <secondary>PostgreSQL service configuration</secondary>
+      </indexterm>
+      <title>PostgreSQL service configuration</title>
+      <para>
+        If using automatic failover, currently <application>repmgrd</application> will need to execute
+        <link linkend="repmgr-standby-follow"><command>repmgr standby follow</command></link>
+        to restart PostgreSQL on standbys to have them follow a new primary.
+      </para>
+      <para>
+        To ensure this happens smoothly, it's essential to provide the appropriate system/service restart
+        command appropriate to your operating system via <varname>service_restart_command</varname>
+        in <filename>repmgr.conf</filename>. If you don't do this, <application>repmgrd</application>
+        will default to using <command>pg_ctl</command>, which can result in unexpected problems,
+        particularly on <application>systemd</application>-based systems.
+      </para>
+      <para>
+        For more details, see <xref linkend="configuration-file-service-commands">.
+      </para>
+    </sect2>
+
+    <sect2 id="repmgrd-service-configuration">
+      <indexterm>
+        <primary>repmgrd</primary>
+        <secondary>repmgrd service configuration</secondary>
+      </indexterm>
+      <title>repmgrd service configuration</title>
+      <para>
+        If you are intending to use the <link linkend="repmgr-daemon-start"><command>repmgr daemon start</command></link>
+        and <link linkend="repmgr-daemon-stop"><command>repmgr daemon stop</command></link> commands, the following
+        parameters <emphasis>must</emphasis> be set in <filename>repmgr.conf</filename>:
+        <itemizedlist spacing="compact" mark="bullet">
+
+          <listitem>
+            <simpara><varname>repmgrd_service_start_command</varname></simpara>
+          </listitem>
+
+          <listitem>
+            <simpara><varname>repmgrd_service_stop_command</varname></simpara>
+          </listitem>
+
+        </itemizedlist>
+
+      </para>
+      <para>
+        Example (for &repmgr; with PostgreSQL 11 on CentOS 7):
+        <programlisting>
+repmgrd_service_start_command='sudo systemctl repmgr11 start'
+repmgrd_service_stop_command='sudo systemctl repmgr11 stop'
+</programlisting>
+      </para>
+      <para>
+        For more details see the reference page for each command.
+      </para>
+    </sect2>
+
+
+    <sect2 id="repmgrd-monitoring-configuration" xreflabel="repmgrd monitoring configuration">
+      <indexterm>
+        <primary>repmgrd</primary>
+        <secondary>monitoring configuration</secondary>
+      </indexterm>
+      <title>Monitoring configuration</title>
+      <para>
+        To enable monitoring, set:
+        <programlisting>
+          monitoring_history=yes</programlisting>
+        in <filename>repmgr.conf</filename>.
+      </para>
+      <para>
+        Monitoring data is written at the interval defined by
+        the option <option>monitor_interval_secs</option> (see above).
+      </para>
+      <para>
+        For more details on monitoring, see <xref linkend="repmgrd-monitoring">.
+      </para>
+    </sect2>
+
+    <sect2 id="repmgrd-reloading-configuration"xreflabel="reloading repmgrd configuration">
+      <indexterm>
+        <primary>repmgrd</primary>
+        <secondary>applying configuration changes</secondary>
+      </indexterm>
+      <title>Applying configuration changes to repmgrd</title>
+      <para>
+        To apply configuration file changes to a running <application>repmgrd</application>
+        daemon, execute the operating system's <application>repmgrd</application> service reload command
+        (see <xref linkend="appendix-packages"> for examples),
+          or for instances  which were manually started, execute <command>kill -HUP</command>, e.g.
+          <command>kill -HUP `cat /tmp/repmgrd.pid`</command>.
+      </para>
+      <tip>
+        <para>
+          Check the <application>repmgrd</application> log to see what changes were
+          applied, or if any issues were encountered when reloading the configuration.
+        </para>
+      </tip>
+      <para>
+        Note that only the following subset of configuration file parameters can be changed on a
+        running <application>repmgrd</application> daemon:
+      </para>
+      <itemizedlist spacing="compact" mark="bullet">
+
+        <listitem>
+          <simpara>
+            <varname>async_query_timeout</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>bdr_local_monitoring_only</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>bdr_recovery_timeout</varname>
+          </simpara>
+        </listitem>
+
+
+        <listitem>
+          <simpara>
+            <varname>connection_check_type</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>conninfo</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>degraded_monitoring_timeout</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>event_notification_command</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>event_notifications</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>failover_validation_command</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>failover</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>follow_command</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>log_facility</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>log_file</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>log_level</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>log_status_interval</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>monitor_interval_secs</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>monitoring_history</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>primary_notification_timeout</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>promote_command</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>reconnect_attempts</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>reconnect_interval</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>retry_promote_interval_secs</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>repmgrd_standby_startup_timeout</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>sibling_nodes_disconnect_timeout</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>standby_disconnect_on_failover</varname>
+          </simpara>
+        </listitem>
+
+      </itemizedlist>
+
+      <para>
+        The following set of configuration file parameters must be updated via
+        <command><link linkend="repmgr-standby-register">repmgr standby register --force</link></command>,
+        as they require changes to the <literal>repmgr.nodes</literal> table so they are visible to
+        all nodes in the replication cluster:
+      </para>
+      <itemizedlist spacing="compact" mark="bullet">
+
+        <listitem>
+          <simpara>
+            <varname>node_id</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>node_name</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>data_directory</varname>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <varname>location</varname>
+          </simpara>
+        </listitem>
+
+
+        <listitem>
+          <simpara>
+            <varname>priority</varname>
+          </simpara>
+        </listitem>
+
+      </itemizedlist>
+
+      <note>
+        <para>
+          After executing <command><link linkend="repmgr-standby-register">repmgr standby register --force</link></command>,
+          <application>repmgrd</application> <emphasis>must</emphasis> be restarted for the changes to take effect.
+        </para>
+      </note>
+
+    </sect2>
+
+  </sect1>
+
+  <sect1 id="repmgrd-daemon" xreflabel="repmgrd daemon">
+    <indexterm>
+      <primary>repmgrd</primary>
+      <secondary>starting and stopping</secondary>
+    </indexterm>
+    <title>repmgrd daemon</title>
+    <para>
+      If installed from a package, the <application>repmgrd</application> can be started
+      via the operating system's service command, e.g. in <application>systemd</application>
+      using <command>systemctl</command>.
+    </para>
+    <para>
+      See appendix <xref linkend="appendix-packages"> for details of service commands
+      for different distributions.
+    </para>
+    <para>
+      The commands <link linkend="repmgr-daemon-start"><command>repmgr daemon start</command></link> and
+      <link linkend="repmgr-daemon-stop"><command>repmgr daemon stop</command></link> can be used
+      as convenience wrappers to start and stop <application>repmgrd</application>.
+    </para>
+    <important>
+      <para>
+        <link linkend="repmgr-daemon-start"><command>repmgr daemon start</command></link> and
+        <link linkend="repmgr-daemon-stop"><command>repmgr daemon stop</command></link> require
+        that the appropriate start/stop commands are configured as
+        <varname>repmgrd_service_start_command</varname> and <varname>repmgrd_service_stop_command</varname>
+        in <filename>repmgr.conf</filename>.
+      </para>
+    </important>
+    <para>
+      <application>repmgrd</application> can be started manually like this:
+      <programlisting>
+        repmgrd -f /etc/repmgr.conf --pid-file /tmp/repmgrd.pid</programlisting>
+      and stopped with <command>kill `cat /tmp/repmgrd.pid`</command>. Adjust paths as appropriate.
+    </para>
+
+    <sect2 id="repmgrd-pid-file" xreflabel="repmgrd's PID file">
+      <indexterm>
+        <primary>repmgrd</primary>
+        <secondary>PID file</secondary>
+      </indexterm>
+      <indexterm>
+        <primary>PID file</primary>
+        <secondary>repmgrd</secondary>
+      </indexterm>
+      <title>repmgrd's PID file</title>
+      <para>
+        <application>repmgrd</application> will generate a PID file by default.
+      </para>
+      <note>
+        <simpara>
+          This is a behaviour change from previous versions (earlier than 4.1), where
+          the PID file had to be explicitly specified with the command line
+          parameter <option>--pid-file</option>.
+        </simpara>
+      </note>
+      <para>
+        The PID file can be specified in <filename>repmgr.conf</filename> with the configuration
+        parameter <varname>repmgrd_pid_file</varname>.
+      </para>
+      <para>
+        It can also be specified on the command line (as in previous versions) with
+        the command line parameter <option>--pid-file</option>. Note this will override
+        any value set in <filename>repmgr.conf</filename> with <varname>repmgrd_pid_file</varname>.
+        <option>--pid-file</option> may be deprecated in future releases.
+      </para>
+      <para>
+        If a PID file location was specified by the package maintainer, <application>repmgrd</application>
+        will use that. This only applies if &repmgr; was installed from a package and the package
+        maintainer has specified the PID file location.
+      </para>
+      <para>
+        If none of the above apply, <application>repmgrd</application> will create a PID file
+        in the operating system's temporary directory (as setermined by the environment variable
+        <varname>TMPDIR</varname>, or if that is not set, will use <filename>/tmp</filename>).
+      </para>
+      <para>
+        To prevent a PID file being generated at all, provide the command line option
+        <option>--no-pid-file</option>.
+      </para>
+      <para>
+        To see which PID file <application>repmgrd</application> would use, execute <application>repmgrd</application>
+        with the option <option>--show-pid-file</option>. <application>repmgrd</application>
+        will not start if this option is provided. Note that the value shown is the
+        file  <application>repmgrd</application> would use next time it starts, and is
+        not necessarily the PID file currently in use.
+      </para>
+    </sect2>
+
+    <sect2 id="repmgrd-configuration-debian-ubuntu">
+      <indexterm>
+        <primary>repmgrd</primary>
+        <secondary>Debian/Ubuntu and daemon configuration</secondary>
+      </indexterm>
+      <indexterm>
+        <primary>Debian/Ubuntu</primary>
+        <secondary>repmgrd daemon configuration</secondary>
+      </indexterm>
+
+      <title>repmgrd daemon configuration on Debian/Ubuntu</title>
+
+      <para>
+        If &repmgr; was installed from Debian/Ubuntu packages, additional configuration
+        is required before <application>repmgrd</application> is started as a daemon.
+      </para>
+      <para>
+        This is done via the file <filename>/etc/default/repmgrd</filename>, which by default
+        looks like this:
+        <programlisting>
+# default settings for repmgrd. This file is source by /bin/sh from
+# /etc/init.d/repmgrd
+
+# disable repmgrd by default so it won't get started upon installation
+# valid values: yes/no
+REPMGRD_ENABLED=no
+
+# configuration file (required)
+#REPMGRD_CONF="/path/to/repmgr.conf"
+
+# additional options
+REPMGRD_OPTS="--daemonize=false"
+
+# user to run repmgrd as
+#REPMGRD_USER=postgres
+
+# repmgrd binary
+#REPMGRD_BIN=/usr/bin/repmgrd
+
+# pid file
+#REPMGRD_PIDFILE=/var/run/repmgrd.pid</programlisting>
+      </para>
+      <para>
+        Set <varname>REPMGRD_ENABLED</varname> to <literal>yes</literal>, and <varname>REPMGRD_CONF</varname>
+        to the <filename>repmgr.conf</filename> file you are using.
+      </para>
+      <tip>
+        <para>
+          See <xref linkend="packages-debian-ubuntu"> for details of the Debian/Ubuntu packages and
+          typical file locations (including <filename>repmgr.conf</filename>).
+        </para>
+      </tip>
+      <para>
+        From <application>repmgrd</application> 4.1, ensure <varname>REPMGRD_OPTS</varname> includes
+        <option>--daemonize=false</option>, as daemonization is handled by the service command.
+      </para>
+      <para>
+        If using <application>systemd</application>, you may need to execute <command>systemctl daemon-reload</command>.
+        Also, if you attempted to start <application>repmgrd</application> using <command>systemctl start repmgrd</command>,
+        you'll need to execute <command>systemctl stop repmgrd</command>. Because that's how <application>systemd</application>
+        rolls.
+      </para>
+
+    </sect2>
+  </sect1>
+
+  <sect1 id="repmgrd-connection-settings">
+    <title>repmgrd connection settings</title>
+ <para>
+  In addition to the &repmgr; configuration settings, parameters in the
+  <varname>conninfo</varname> string influence how &repmgr; makes a network connection to
+  PostgreSQL. In particular, if another server in the replication cluster
+  is unreachable at network level, system network settings will influence
+  the length of time it takes to determine that the connection is not possible.
+ </para>
+ <para>
+  In particular explicitly setting a parameter for <literal>connect_timeout</literal>
+  should be considered; the effective minimum value of <literal>2</literal>
+  (seconds) will ensure that a connection failure at network level is reported
+  as soon as possible, otherwise depending on the system settings (e.g.
+  <varname>tcp_syn_retries</varname> in Linux) a delay of a minute or more
+  is possible.
+ </para>
+ <para>
+  For further details on <varname>conninfo</varname> network connection
+  parameters, see the
+  <ulink url="https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS">PostgreSQL documentation</ulink>.
+ </para>
+ </sect1>
+
+
+
+ <sect1 id="repmgrd-log-rotation">
+   <indexterm>
+     <primary>log rotation</primary>
+     <secondary>repmgrd</secondary>
+   </indexterm>
+
+   <indexterm>
+     <primary>repmgrd</primary>
+     <secondary>log rotation</secondary>
+   </indexterm>
+
+  <title>repmgrd log rotation</title>
+  <para>
+   To ensure the current <application>repmgrd</application> logfile
+   (specified in <filename>repmgr.conf</filename> with the parameter
+   <option>log_file</option>) does not grow indefinitely, configure your
+   system's <command>logrotate</command> to regularly rotate it.
+  </para>
+  <para>
+   Sample configuration to rotate logfiles weekly with retention for
+   up to 52 weeks and rotation forced if a file grows beyond 100Mb:
+   <programlisting>
+    /var/log/repmgr/repmgrd.log {
+        missingok
+        compress
+        rotate 52
+        maxsize 100M
+        weekly
+        create 0600 postgres postgres
+        postrotate
+            /usr/bin/killall -HUP repmgrd
+        endscript
+    }</programlisting>
+  </para>
+
+ </sect1>
+</chapter>

@@ -1,0 +1,210 @@
+<refentry id="repmgr-node-check">
+  <indexterm>
+    <primary>repmgr node check</primary>
+  </indexterm>
+
+  <refmeta>
+    <refentrytitle>repmgr node check</refentrytitle>
+  </refmeta>
+
+  <refnamediv>
+    <refname>repmgr node check</refname>
+    <refpurpose>performs some health checks on a node from a replication perspective</refpurpose>
+  </refnamediv>
+
+  <refsect1>
+    <title>Description</title>
+    <para>
+      Performs some health checks on a node from a replication perspective.
+      This command must be run on the local node.
+    </para>
+	<note>
+	  <para>
+		Currently &repmgr; performs health checks on physical replication
+		slots only, with the aim of warning about streaming replication standbys which
+		have become detached and the associated risk of uncontrolled WAL file
+		growth.
+	  </para>
+	</note>
+  </refsect1>
+
+  <refsect1>
+    <title>Example</title>
+    <para>
+      <programlisting>
+       $ repmgr -f /etc/repmgr.conf node check
+       Node "node1":
+            Server role: OK (node is primary)
+            Replication lag: OK (N/A - node is primary)
+            WAL archiving: OK (0 pending files)
+            Downstream servers: OK (2 of 2 downstream nodes attached)
+            Replication slots: OK (node has no physical replication slots)
+            Missing replication slots: OK (node has no missing physical replication slots)</programlisting>
+    </para>
+  </refsect1>
+  <refsect1>
+    <title>Individual checks</title>
+    <para>
+      Each check can be performed individually by supplying
+      an additional command line parameter, e.g.:
+      <programlisting>
+        $ repmgr node check --role
+        OK (node is primary)</programlisting>
+    </para>
+    <para>
+	  Parameters for individual checks are as follows:
+    <itemizedlist spacing="compact" mark="bullet">
+
+     <listitem>
+      <simpara>
+        <literal>--role</literal>: checks if the node has the expected role
+      </simpara>
+     </listitem>
+
+     <listitem>
+      <simpara>
+        <literal>--replication-lag</literal>: checks if the node is lagging by more than
+        <varname>replication_lag_warning</varname> or <varname>replication_lag_critical</varname>
+      </simpara>
+     </listitem>
+
+     <listitem>
+      <simpara>
+        <literal>--archive-ready</literal>: checks for WAL files which have not yet been archived,
+        and returns <literal>WARNING</literal> or <literal>CRITICAL</literal> if the number
+        exceeds <varname>archive_ready_warning</varname> or <varname>archive_ready_critical</varname> respectively.
+      </simpara>
+     </listitem>
+
+     <listitem>
+      <simpara>
+        <literal>--downstream</literal>: checks that the expected downstream nodes are attached
+      </simpara>
+     </listitem>
+
+     <listitem>
+      <simpara>
+        <literal>--slots</literal>: checks there are no inactive physical replication slots
+      </simpara>
+     </listitem>
+
+     <listitem>
+      <simpara>
+        <literal>--missing-slots</literal>: checks there are no missing physical replication slots
+      </simpara>
+     </listitem>
+
+     <listitem>
+      <simpara>
+        <literal>--data-directory-config</literal>: checks the data directory configured in
+        <filename>repmgr.conf</filename> matches the actual data directory.
+        This check is not directly related to replication, but is useful to verify &repmgr;
+        is correctly configured.
+      </simpara>
+     </listitem>
+
+
+    </itemizedlist>
+  </para>
+  </refsect1>
+
+  <refsect1>
+    <title>Output format</title>
+    <para>
+      <itemizedlist spacing="compact" mark="bullet">
+
+        <listitem>
+          <simpara>
+            <literal>--csv</literal>: generate output in CSV format (not available
+            for individual checks)
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <literal>--nagios</literal>: generate output in a Nagios-compatible format
+            (for individual checks only)
+          </simpara>
+        </listitem>
+      </itemizedlist>
+    </para>
+  </refsect1>
+
+  <refsect1>
+    <title>Exit codes</title>
+
+    <para>
+      When executing <command>repmgr node check</command> with one of the individual
+      checks listed above, &repmgr; will emit one of the following Nagios-style exit codes
+      (even if <literal>--nagios</literal> is not supplied):
+
+      <itemizedlist spacing="compact" mark="bullet">
+
+        <listitem>
+          <simpara>
+            <literal>0</literal>: OK
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <literal>1</literal>: WARNING
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <literal>2</literal>: ERROR
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <literal>3</literal>: UNKNOWN
+          </simpara>
+        </listitem>
+
+      </itemizedlist>
+    </para>
+
+
+
+    <para>
+      One of the following exit codes will be emitted by <command>repmgr status check</command>
+      if no individual check was specified.
+    </para>
+
+    <variablelist>
+
+      <varlistentry>
+        <term><option>SUCCESS (0)</option></term>
+        <listitem>
+          <para>
+            No issues were detected.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_NODE_STATUS (25)</option></term>
+        <listitem>
+          <para>
+            One or more issues were detected.
+          </para>
+        </listitem>
+      </varlistentry>
+
+   </variablelist>
+
+  </refsect1>
+
+
+
+  <refsect1>
+    <title>See also</title>
+    <para>
+     <xref linkend="repmgr-node-status">, <xref linkend="repmgr-cluster-show">
+    </para>
+  </refsect1>
+
+</refentry>

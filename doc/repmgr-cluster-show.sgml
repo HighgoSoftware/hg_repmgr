@@ -1,0 +1,238 @@
+<refentry id="repmgr-cluster-show">
+  <indexterm>
+    <primary>repmgr cluster show</primary>
+  </indexterm>
+
+  <refmeta>
+    <refentrytitle>repmgr cluster show</refentrytitle>
+  </refmeta>
+
+  <refnamediv>
+    <refname>repmgr cluster show</refname>
+    <refpurpose>display information about each registered node in the replication cluster</refpurpose>
+  </refnamediv>
+
+
+  <refsect1>
+    <title>Description</title>
+    <para>
+      Displays information about each registered node in the replication cluster. This
+      command polls each registered server and shows its role (<literal>primary</literal> /
+      <literal>standby</literal> / <literal>bdr</literal>) and status. It polls each server
+      directly and can be run on any node in the cluster; this is also useful when analyzing
+      connectivity from a particular node.
+    </para>
+
+    <para>
+      Node availability is tested by connecting from the node where
+      <command>repmgr cluster show</command> is executed, and does not necessarily imply the node
+      is down. See <xref linkend="repmgr-cluster-matrix"> and <xref linkend="repmgr-cluster-crosscheck"> to get
+      better overviews of connections between nodes.
+    </para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Execution</title>
+    <para>
+      This command requires either a valid <filename>repmgr.conf</filename> file or a database
+      connection string to one of the registered nodes; no additional arguments are needed.
+    </para>
+
+    <para>
+      To show database connection errors when polling nodes, run the command in
+      <literal>--verbose</literal> mode.
+    </para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Example</title>
+    <para>
+    <programlisting>
+    $ repmgr -f /etc/repmgr.conf cluster show
+
+     ID | Name  | Role    | Status    | Upstream | Location | Priority | Connection string
+    ----+-------+---------+-----------+----------+----------+----------+-----------------------------------------
+     1  | node1 | primary | * running |          | default  | 100      | host=db_node1 dbname=repmgr user=repmgr
+     2  | node2 | standby |   running | node1    | default  | 100      | host=db_node2 dbname=repmgr user=repmgr
+     3  | node3 | standby |   running | node1    | default  | 100      | host=db_node3 dbname=repmgr user=repmgr</programlisting>
+  </para>
+  </refsect1>
+  <refsect1>
+    <title>Notes</title>
+    <para>
+      The column <literal>Role</literal> shows the expected server role according to the
+      &repmgr; metadata.
+	</para>
+	<para>
+	  <literal>Status</literal> shows whether the server is running or unreachable.
+      If the node has an unexpected role not reflected in the &repmgr; metadata, e.g. a node was manually
+      promoted to primary, this will be highlighted with an exclamation mark.
+	  If a connection to the node cannot be made, this will be highlighted with a question mark.
+	  Note that the node will only be shown as <literal>? unreachable</literal>
+	  if a connection is not possible at network level; if the PostgreSQL instance on the
+	  node is pingable but not accepting connections, it will be shown as <literal>? running</literal>.
+	</para>
+	<para>
+	  In the following example, executed on <literal>node3</literal>, <literal>node1</literal> is not reachable
+	  at network level and assumed to be down; <literal>node2</literal> has been promoted to primary
+	  (but <literal>node3</literal> is not attached to it, and its metadata has not yet been updated);
+	  <literal>node4</literal> is running but rejecting connections (from <literal>node3</literal> at least).
+      <programlisting>
+	 ID | Name  | Role    | Status               | Upstream | Location | Priority | Connection string
+	----+-------+---------+----------------------+----------+----------+----------+-----------------------------------------
+	 1  | node1 | primary | ? unreachable        |          | default  | 100      | host=db_node1 dbname=repmgr user=repmgr
+	 2  | node2 | standby | ! running as primary | node1    | default  | 100      | host=db_node2 dbname=repmgr user=repmgr
+	 3  | node3 | standby |   running            | node1    | default  | 100      | host=db_node3 dbname=repmgr user=repmgr
+	 4  | node4 | standby | ? running            | node1    | default  | 100      | host=db_node4 dbname=repmgr user=repmgr
+
+	WARNING: following issues were detected
+	  - unable to connect to node "node1" (ID: 1)
+	  - node "node1" (ID: 1) is registered as an active primary but is unreachable
+	  - node "node2" (ID: 2) is registered as standby but running as primary
+	  - unable to connect to node "node4" (ID: 4)
+    HINT: execute with --verbose option to see connection error messages</programlisting>
+    </para>
+	<para>
+	  To diagnose connection issues, execute <command>repmgr cluster show</command>
+	  with the <option>--verbose</option> option; this will display the error message
+	  for each failed connection attempt.
+	</para>
+	<tip>
+	  <para>
+		Use <xref linkend="repmgr-cluster-matrix"> and <xref linkend="repmgr-cluster-crosscheck">
+		to diagnose connection issues across the whole replication cluster.
+	  </para>
+	</tip>
+  </refsect1>
+
+  <refsect1>
+    <title>Options</title>
+
+    <variablelist>
+
+      <varlistentry>
+        <term><option>--csv</option></term>
+        <listitem>
+	  <para>
+	    <command>repmgr cluster show</command> accepts an optional parameter <literal>--csv</literal>, which
+	    outputs the replication cluster's status in a simple CSV format, suitable for
+	    parsing by scripts, e.g.:
+	    <programlisting>
+    $ repmgr -f /etc/repmgr.conf cluster show --csv
+    1,-1,-1
+    2,0,0
+    3,0,1</programlisting>
+	  </para>
+	  <para>
+	    The columns have following meanings:
+	    <itemizedlist spacing="compact" mark="bullet">
+	      <listitem>
+		<simpara>
+		  node ID
+		</simpara>
+	      </listitem>
+	      <listitem>
+		<simpara>
+            availability (0 = available, -1 = unavailable)
+		</simpara>
+	      </listitem>
+	      <listitem>
+		<simpara>
+            recovery state (0 = not in recovery, 1 = in recovery, -1 = unknown)
+		</simpara>
+	      </listitem>
+	    </itemizedlist>
+	  </para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--compact</option></term>
+        <listitem>
+          <para>
+			Suppress display of the <literal>conninfo</literal> column.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--terse</option></term>
+        <listitem>
+          <para>
+			Suppress warnings about connection issues.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--verbose</option></term>
+        <listitem>
+          <para>
+			Display the full text of any database connection error messages
+          </para>
+        </listitem>
+      </varlistentry>
+
+	</variablelist>
+
+  </refsect1>
+
+
+  <refsect1>
+    <title>Exit codes</title>
+    <para>
+      One of the following exit codes will be emitted by <command>repmgr cluster show</command>:
+    </para>
+    <variablelist>
+
+      <varlistentry>
+        <term><option>SUCCESS (0)</option></term>
+        <listitem>
+          <para>
+            No issues were detected.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_BAD_CONFIG (1)</option></term>
+        <listitem>
+          <para>
+            An issue was encountered while attempting to retrieve
+            &repmgr; metadata.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_DB_CONN (6)</option></term>
+        <listitem>
+          <para>
+            &repmgr; was unable to connect to the local PostgreSQL instance.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_NODE_STATUS (25)</option></term>
+        <listitem>
+          <para>
+            One or more issues were detected with the replication configuration,
+            e.g. a node was not in its expected state.
+          </para>
+        </listitem>
+      </varlistentry>
+
+   </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+    <para>
+     <xref linkend="repmgr-node-status">, <xref linkend="repmgr-node-check">, <xref linkend="repmgr-daemon-status">
+    </para>
+  </refsect1>
+
+</refentry>

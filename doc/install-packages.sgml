@@ -1,0 +1,274 @@
+<sect1 id="installation-packages" xreflabel="Installing from packages">
+ <title>Installing &repmgr; from packages</title>
+
+  <indexterm>
+   <primary>installation</primary>
+   <secondary>from packages</secondary>
+  </indexterm>
+
+ <para>
+  We recommend installing &repmgr; using the available packages for your
+  system.
+ </para>
+
+ <sect2 id="installation-packages-redhat" xreflabel="Installing from packages on RHEL, CentOS and Fedora">
+
+  <indexterm>
+   <primary>installation</primary>
+   <secondary>on Red Hat/CentOS/Fedora etc.</secondary>
+  </indexterm>
+
+  <title>RedHat/CentOS/Fedora</title>
+  <para>
+	&repmgr; RPM packages for RedHat/CentOS variants and Fedora are available from the
+	<ulink url="https://2ndquadrant.com">2ndQuadrant</ulink>
+	<ulink url="https://dl.2ndquadrant.com/">public repository</ulink>; see following
+	section for details.
+  </para>
+  <para>
+   RPM packages for &repmgr; are also available via Yum through
+   the PostgreSQL Global Development Group RPM repository
+   (<ulink url="https://yum.postgresql.org/">http://yum.postgresql.org/</ulink>).
+   Follow the instructions for your distribution (RedHat, CentOS,
+   Fedora, etc.) and architecture as detailed there. Note that it can take some days
+   for new &repmgr; packages to become available via the this repository.
+  </para>
+  <note>
+    <para>
+      &repmgr; RPM packages are designed to be compatible with the community-provided PostgreSQL packages
+      and 2ndQuadrant's <ulink url="https://www.2ndquadrant.com/en/resources/2ndqpostgres/">2ndQPostgres</ulink>.
+      They may not work with vendor-specific packages such as those provided by RedHat for RHEL
+      customers, as the PostgreSQL filesystem layout may be different to the community RPMs.
+      Please contact your support vendor for assistance.
+    </para>
+  </note>
+
+  <para>
+    For more information on the package contents, including details of installation
+    paths and relevant <link linkend="configuration-file-service-commands">service commands</link>,
+    see the appendix section <xref linkend="packages-centos">.
+  </para>
+
+
+  <sect3 id="installation-packages-redhat-2ndq">
+    <title>2ndQuadrant public RPM yum repository</title>
+
+    <para>
+      <ulink url="https://2ndquadrant.com/">2ndQuadrant</ulink> provides a dedicated <literal>yum</literal>
+      <ulink url="https://dl.2ndquadrant.com/">public repository</ulink> for 2ndQuadrant software,
+      including &repmgr;. We recommend using this for all future &repmgr; releases.
+    </para>
+    <para>
+      General instructions for using this repository can be found on its
+      <ulink url="https://dl.2ndquadrant.com/">homepage</ulink>. Specific instructions
+      for installing &repmgr; follow below.
+    </para>
+    <para>
+      <emphasis>Installation</emphasis>
+
+      <itemizedlist>
+	<listitem>
+	  <para>
+	    Locate the repository RPM for your PostgreSQL version from the list at:
+	    <ulink url="https://dl.2ndquadrant.com/">https://dl.2ndquadrant.com/</ulink>
+	  </para>
+	</listitem>
+
+        <listitem>
+          <para>
+            Install the repository definition for your distribution and PostgreSQL version
+	    (this enables the 2ndQuadrant repository as a source of &repmgr; packages).
+	  </para>
+	  <para>
+	    For example, for PostgreSQL 10 on CentOS, execute:
+	    <programlisting>
+curl https://dl.2ndquadrant.com/default/release/get/10/rpm | sudo bash</programlisting>
+	  </para>
+
+	  <para>
+	    For PostgreSQL 9.6 on CentOS, execute:
+	    <programlisting>
+curl https://dl.2ndquadrant.com/default/release/get/9.6/rpm | sudo bash</programlisting>
+	  </para>
+
+
+	  <para>
+	    Verify that the repository is installed with:
+	    <programlisting>
+sudo yum repolist</programlisting>
+	    The output should contain two entries like this:
+	    <programlisting>
+2ndquadrant-dl-default-release-pg10/7/x86_64        2ndQuadrant packages (PG10) for 7 - x86_64          4
+2ndquadrant-dl-default-release-pg10-debug/7/x86_64  2ndQuadrant packages (PG10) for 7 - x86_64 - Debug  3</programlisting>
+	  </para>
+	</listitem>
+
+        <listitem>
+          <para>
+            Install the &repmgr version appropriate for your PostgreSQL version (e.g. <literal>repmgr10</literal>):
+            <programlisting>
+sudo yum install repmgr10</programlisting>
+          </para>
+          <note>
+            <para>
+              For packages for PostgreSQL 9.6 and earlier, the package name does not contain
+              a period between major and minor version numbers, e.g.
+              <literal>repmgr96</literal>.
+            </para>
+          </note>
+          <tip>
+            <para>
+              To determine the names of available packages, execute:
+              <programlisting>
+yum search repmgr</programlisting>
+            </para>
+          </tip>
+
+        </listitem>
+      </itemizedlist>
+    </para>
+
+    <para>
+      <emphasis>Compatibility with PGDG Repositories</emphasis>
+    </para>
+    <para>
+      The 2ndQuadrant &repmgr; yum repository packages use the same definitions and file system layout as the
+      main PGDG repository.
+    </para>
+    <para>
+      Normally <application>yum</application> will prioritize the repository with the most recent &repmgr; version.
+      Once the PGDG repository has been updated, it doesn't matter which repository
+      the packages are installed from.
+    </para>
+    <para>
+      To ensure the 2ndQuadrant repository is always prioritised, install <literal>yum-plugin-priorities</literal>
+      and set the repository priorities accordingly.
+    </para>
+
+    <para>
+      <emphasis>Installing a specific package version</emphasis>
+    </para>
+    <para>
+      To install a specific package version, execute <command>yum --showduplicates list</command>
+      for the package in question:
+      <programlisting>
+        [root@localhost ~]# yum --showduplicates list repmgr10
+        Loaded plugins: fastestmirror
+        Loading mirror speeds from cached hostfile
+         * base: ftp.iij.ad.jp
+         * extras: ftp.iij.ad.jp
+         * updates: ftp.iij.ad.jp
+        Available Packages
+		repmgr10.x86_64                       4.0.3-1.rhel7                        pgdg10
+		repmgr10.x86_64                       4.0.4-1.rhel7                        pgdg10
+		repmgr10.x86_64                       4.0.5-1.el7                          2ndquadrant-repo-10</programlisting>
+      then append the appropriate version number to the package name with a hyphen, e.g.:
+      <programlisting>
+        [root@localhost ~]# yum install repmgr10-4.0.3-1.rhel7</programlisting>
+    </para>
+
+    <para>
+      <emphasis>Installing old packages</emphasis>
+    </para>
+    <para>
+      See appendix <link linkend="packages-old-versions-rhel-centos">Installing old package versions</link>
+      for details on how to retrieve older package versions.
+    </para>
+
+  </sect3>
+
+ </sect2>
+
+ <sect2 id="installation-packages-debian" xreflabel="Installing from packages on Debian or Ubuntu">
+
+  <indexterm>
+   <primary>installation</primary>
+   <secondary>on Debian/Ubuntu etc.</secondary>
+  </indexterm>
+
+  <title>Debian/Ubuntu</title>
+  <para>.deb packages for &repmgr; are available from the
+  PostgreSQL Community APT repository (<ulink url="http://apt.postgresql.org/">http://apt.postgresql.org/</ulink>).
+  Instructions can be found in the APT section of the PostgreSQL Wiki
+  (<ulink url="https://wiki.postgresql.org/wiki/Apt">https://wiki.postgresql.org/wiki/Apt</ulink>).
+  </para>
+  <para>
+    For more information on the package contents, including details of installation
+    paths and relevant <link linkend="configuration-file-service-commands">service commands</link>,
+    see the appendix section <xref linkend="packages-debian-ubuntu">.
+  </para>
+
+  <sect3 id="installation-packages-debian-ubuntu-2ndq">
+    <title>2ndQuadrant public apt repository for Debian/Ubuntu</title>
+
+    <para>
+      <ulink url="https://2ndquadrant.com/">2ndQuadrant</ulink> provides a
+      <ulink url="https://dl.2ndquadrant.com/">public apt repository</ulink> for 2ndQuadrant software,
+      including &repmgr;.
+    </para>
+    <para>
+      General instructions for using this repository can be found on its
+      <ulink url="https://dl.2ndquadrant.com/">homepage</ulink>. Specific instructions
+      for installing &repmgr; follow below.
+    </para>
+
+    <para>
+
+      <emphasis>Installation</emphasis>
+
+      <itemizedlist>
+
+	<listitem>
+	  <para>
+            Install the repository definition for your distribution and PostgreSQL version
+	    (this enables the 2ndQuadrant repository as a source of &repmgr; packages) by executing:
+            <programlisting>
+curl https://dl.2ndquadrant.com/default/release/get/deb | sudo bash</programlisting>
+	  </para>
+          <note>
+            <para>
+              This will automatically install the following additional packages, if not already present:
+              <itemizedlist spacing="compact" mark="bullet">
+                <listitem>
+                  <simpara><literal>lsb-release</literal></simpara>
+                </listitem>
+                <listitem>
+                  <simpara><literal>apt-transport-https</literal></simpara>
+                </listitem>
+              </itemizedlist>
+            </para>
+          </note>
+        </listitem>
+
+	<listitem>
+	  <para>
+            Install the &repmgr version appropriate for your PostgreSQL version (e.g. <literal>repmgr10</literal>):
+            <programlisting>
+sudo apt-get install postgresql-10-repmgr</programlisting>
+	  </para>
+          <note>
+            <para>
+            For packages for PostgreSQL 9.6 and earlier, the package name includes
+            a period between major and minor version numbers, e.g.
+            <literal>postgresql-9.6-repmgr</literal>.
+            </para>
+          </note>
+	</listitem>
+
+      </itemizedlist>
+
+    </para>
+
+    <para>
+      <emphasis>Installing old packages</emphasis>
+    </para>
+    <para>
+      See appendix <link linkend="packages-old-versions-debian">Installing old package versions</link>
+      for details on how to retrieve older package versions.
+    </para>
+
+
+  </sect3>
+ </sect2>
+
+</sect1>

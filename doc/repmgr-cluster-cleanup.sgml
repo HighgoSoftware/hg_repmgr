@@ -1,0 +1,77 @@
+<refentry id="repmgr-cluster-cleanup">
+  <indexterm>
+    <primary>repmgr cluster cleanup</primary>
+  </indexterm>
+ <refmeta>
+    <refentrytitle>repmgr cluster cleanup</refentrytitle>
+  </refmeta>
+
+  <refnamediv>
+    <refname>repmgr cluster cleanup</refname>
+    <refpurpose>purge monitoring history</refpurpose>
+  </refnamediv>
+
+  <refsect1>
+    <title>Description</title>
+    <para>
+      Purges monitoring history from the <literal>repmgr.monitoring_history</literal> table to
+      prevent excessive table growth.
+    </para>
+    <para>
+      By default <emphasis>all</emphasis> data will be removed; Use the <option>-k/--keep-history</option>
+      option to specify the number of days of monitoring history to retain.
+    </para>
+    <para>
+      This command can be executed manually or as a cronjob.
+    </para>
+  </refsect1>
+
+  <refsect1>
+    <title>Usage</title>
+    <para>
+      This command requires a valid <filename>repmgr.conf</filename> file for the node on which it is
+      executed; no additional arguments are required.
+    </para>
+  </refsect1>
+
+  <refsect1>
+    <title>Notes</title>
+
+    <para>
+      Monitoring history will only be written if <application>repmgrd</application> is active, and
+      <varname>monitoring_history</varname> is set to <literal>true</literal> in
+      <filename>repmgr.conf</filename>.
+    </para>
+  </refsect1>
+
+  <refsect1 id="repmgr-cluster-cleanup-events">
+    <title>Event notifications</title>
+    <para>
+      A <literal>cluster_cleanup</literal> <link linkend="event-notifications">event notification</link> will be generated.
+    </para>
+  </refsect1>
+
+  <refsect1>
+    <title>Options</title>
+    <variablelist>
+
+      <varlistentry>
+        <term><option>--node-id</option></term>
+        <listitem>
+          <para>
+            Only delete monitoring records for the specified node.
+          </para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+    <para>
+      For more details see the sections <xref linkend="repmgrd-monitoring"> and
+      <xref linkend="repmgrd-monitoring-configuration">.
+    </para>
+  </refsect1>
+
+</refentry>

@@ -1,0 +1,130 @@
+<sect1 id="configuration-file-service-commands" xreflabel="service command settings">
+  <indexterm>
+    <primary>repmgr.conf</primary>
+    <secondary>service command settings</secondary>
+  </indexterm>
+  <indexterm>
+    <primary>service command settings</primary>
+    <secondary>configuration in repmgr.conf</secondary>
+  </indexterm>
+  <title>Service command settings</title>
+
+  <para>
+    In some circumstances, &repmgr; (and <application>repmgrd</application>) need to
+    be able to stop, start or restart PostgreSQL. &repmgr; commands which need to do this
+    include <link linkend="repmgr-standby-follow"><command>repmgr standby follow</command></link>,
+    <link linkend="repmgr-standby-switchover"><command>repmgr standby switchover</command></link> and
+    <link linkend="repmgr-node-rejoin"><command>repmgr node rejoin</command></link>.
+  </para>
+  <para>
+    By default, &repmgr; will use PostgreSQL's <command>pg_ctl</command> utility to control the PostgreSQL
+    server. However this can lead to various problems, particularly when PostgreSQL has been
+    installed from packages, and especially so if <application>systemd</application> is in use.
+  </para>
+
+
+  <note>
+    <para>
+      If using <application>systemd</application>, ensure you have <varname>RemoveIPC</varname> set to <literal>off</literal>.
+      See the <ulink url="https://wiki.postgresql.org/wiki/Systemd">systemd</ulink>
+      entry in the <ulink url="https://wiki.postgresql.org/wiki/Main_Page">PostgreSQL wiki</ulink> for details.
+    </para>
+  </note>
+
+
+  <para>
+    With this in mind, we recommend to <emphasis>always</emphasis> configure &repmgr; to use the
+    available system service commands.
+  </para>
+
+  <para>
+    To do this, specify the appropriate command for each action
+    in <filename>repmgr.conf</filename> using the following configuration
+    parameters:
+    <programlisting>
+    service_start_command
+    service_stop_command
+    service_restart_command
+    service_reload_command</programlisting>
+  </para>
+
+  <note>
+    <para>
+      &repmgr; will not apply <option>pg_bindir</option> when executing any of these commands;
+      these can be user-defined scripts so must always be specified with the full path.
+    </para>
+  </note>
+
+  <note>
+    <para>
+      It's also possible to specify a <varname>service_promote_command</varname>.
+      This is intended for systems which provide a package-level promote command,
+      such as Debian's <application>pg_ctlcluster</application>, to promote the
+      PostgreSQL from standby to primary.
+    </para>
+    <para>
+      If your packaging system does not provide such a command, it can be left empty,
+      and &repmgr; will generate the appropriate `pg_ctl ... promote` command.
+    </para>
+    <para>
+      Do not confuse this with <varname>promote_command</varname>, which is used
+      by <application>repmgrd</application> to execute <xref linkend="repmgr-standby-promote">.
+    </para>
+  </note>
+
+  <para>
+    To confirm which command &repmgr; will execute for each action, use
+    <command><link linkend="repmgr-node-service">repmgr node service --list-actions --action=...</link></command>, e.g.:
+    <programlisting>
+      repmgr -f /etc/repmgr.conf node service --list-actions --action=stop
+      repmgr -f /etc/repmgr.conf node service --list-actions --action=start
+      repmgr -f /etc/repmgr.conf node service --list-actions --action=restart
+      repmgr -f /etc/repmgr.conf node service --list-actions --action=reload</programlisting>
+  </para>
+
+  <para>
+     These commands will be executed by the system user which &repmgr; runs as (usually <literal>postgres</literal>)
+     and will probably require passwordless sudo access to be able to execute the command.
+  </para>
+  <para>
+    For example, using <application>systemd</application> on CentOS 7, the service commands can be
+    set as follows:
+    <programlisting>
+      service_start_command   = 'sudo systemctl start postgresql-9.6'
+      service_stop_command    = 'sudo systemctl stop postgresql-9.6'
+      service_restart_command = 'sudo systemctl restart postgresql-9.6'
+      service_reload_command  = 'sudo systemctl reload postgresql-9.6'</programlisting>
+    and <filename>/etc/sudoers</filename> should be set as follows:
+    <programlisting>
+      Defaults:postgres !requiretty
+      postgres ALL = NOPASSWD: /usr/bin/systemctl stop postgresql-9.6, \
+        /usr/bin/systemctl start postgresql-9.6, \
+        /usr/bin/systemctl restart postgresql-9.6, \
+        /usr/bin/systemctl reload postgresql-9.6</programlisting>
+  </para>
+
+  <important>
+    <indexterm>
+      <primary>pg_ctlcluster</primary>
+      <secondary>service command settings</secondary>
+    </indexterm>
+    <para>
+      Debian/Ubuntu users: instead of calling <command>sudo systemctl</command> directly, use
+      <command>sudo pg_ctlcluster</command>, e.g.:
+    <programlisting>
+      service_start_command   = 'sudo pg_ctlcluster 9.6 main start'
+      service_stop_command    = 'sudo pg_ctlcluster 9.6 main stop'
+      service_restart_command = 'sudo pg_ctlcluster 9.6 main restart'
+      service_reload_command  = 'sudo pg_ctlcluster 9.6 main reload'</programlisting>
+      and set <filename>/etc/sudoers</filename> accordingly.
+    </para>
+    <para>
+      While <command>pg_ctlcluster</command> will work when executed as user <literal>postgres</literal>,
+      it's strongly recommended to use <command>sudo pg_ctlcluster</command> on <application>systemd</application>
+      systems, to ensure <application>systemd</application> has a correct picture of
+      the PostgreSQL application state.
+    </para>
+
+  </important>
+
+</sect1>

@@ -1,0 +1,569 @@
+<appendix id="appendix-packages" xreflabel="Package details">
+  <indexterm>
+    <primary>packages</primary>
+  </indexterm>
+
+  <title>&repmgr; package details</title>
+  <para>
+    This section provides technical details about various &repmgr; binary
+    packages, such as location of the installed binaries and
+    configuration files.
+  </para>
+
+  <sect1 id="packages-centos" xreflabel="CentOS packages">
+    <title>CentOS Packages</title>
+
+    <indexterm>
+      <primary>packages</primary>
+      <secondary>CentOS packages</secondary>
+    </indexterm>
+
+    <indexterm>
+      <primary>CentOS</primary>
+      <secondary>package information</secondary>
+    </indexterm>
+
+    <para>
+      Currently, &repmgr; RPM packages are provided for versions 6.x and 7.x of CentOS. These should also
+      work on matching versions of Red Hat Enterprise Linux, Scientific Linux and Oracle Enterprise Linux;
+      together with CentOS, these are the same RedHat-based distributions for which the main community project
+      (PGDG) provides packages (see the <ulink url="https://yum.postgresql.org/">PostgreSQL RPM Building Project</ulink>
+      page for details).
+    </para>
+
+    <para>
+      Note these &repmgr; RPM packages are not designed to work with SuSE/OpenSuSE.
+    </para>
+
+    <note>
+      <para>
+        &repmgr; packages are designed to be compatible with community-provided PostgreSQL packages.
+        They may not work with vendor-specific packages such as those provided by RedHat for RHEL
+        customers, as the filesystem layout may be different to the community RPMs.
+        Please contact your support vendor for assistance.
+      </para>
+    </note>
+
+    <sect2 id="packages-centos-repositories">
+      <title>CentOS repositories</title>
+
+      <para>
+        &repmgr; packages are available from the public 2ndQuadrant repository, and also the
+        PostgreSQL community repository. The 2ndQuadrant repository is updated immediately
+        after each
+        &repmgr; release.
+      </para>
+
+      <table id="centos-2ndquadrant-repository">
+        <title>2ndQuadrant public repository</title>
+        <tgroup cols="2">
+          <tbody>
+            <row>
+              <entry>Repository URL:</entry>
+              <entry><ulink url="https://dl.2ndquadrant.com/">https://dl.2ndquadrant.com/</ulink></entry>
+            </row>
+            <row>
+              <entry>Repository documentation:</entry>
+              <entry><ulink url="https://repmgr.org/docs/current/installation-packages.html#INSTALLATION-PACKAGES-REDHAT-2NDQ">https://repmgr.org/docs/current/installation-packages.html#INSTALLATION-PACKAGES-REDHAT-2NDQ</ulink></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+
+      <table id="centos-pgdg-repository">
+        <title>PostgreSQL community repository (PGDG)</title>
+        <tgroup cols="2">
+          <tbody>
+            <row>
+              <entry>Repository URL:</entry>
+              <entry><ulink url="https://yum.postgresql.org/repopackages.php">https://yum.postgresql.org/repopackages.php</ulink></entry>
+            </row>
+            <row>
+              <entry>Repository documentation:</entry>
+              <entry><ulink url="https://yum.postgresql.org/">https://yum.postgresql.org/</ulink></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+
+    </sect2>
+
+    <sect2 id="packages-centos-details">
+      <title>CentOS package details</title>
+
+      <para>
+        The two tables below list relevant information, paths, commands etc. for the &repmgr; packages on
+        CentOS 7 (with systemd) and CentOS 6 (no systemd). Substitute the appropriate PostgreSQL major
+        version number for your installation.
+      </para>
+
+      <note>
+        <para>
+          For PostgreSQL 9.6 and lower, the CentOS packages use a mixture of <literal>9.6</literal>
+          and <literal>96</literal> in various places to designate the major version; e.g. the
+          package name is <literal>repmgr96</literal>, but the binary directory is
+          <filename>/var/lib/pgsql/9.6/data</filename>.
+        </para>
+        <para>
+          From PostgreSQL 10, the first part of the version number (e.g. <literal>10</literal>) is
+          the major version, so there is more consistency in file/path/package naming
+          (package <literal>repmgr10</literal>, binary directory <filename>/var/lib/pgsql/10/data</filename>).
+        </para>
+      </note>
+
+
+  <table id="centos-7-packages">
+   <title>CentOS 7 packages</title>
+
+   <tgroup cols="2">
+    <tbody>
+
+     <row>
+      <entry>Package name example:</entry>
+      <entry><filename>repmgr10-4.0.4-1.rhel7.x86_64</filename></entry>
+     </row>
+
+     <row>
+      <entry>Metapackage:</entry>
+      <entry>(none)</entry>
+     </row>
+
+     <row>
+      <entry>Installation command:</entry>
+      <entry><literal>yum install repmgr10</literal></entry>
+     </row>
+
+     <row>
+      <entry>Binary location:</entry>
+      <entry><filename>/usr/pgsql-10/bin</filename></entry>
+     </row>
+
+     <row>
+      <entry>repmgr in default path:</entry>
+      <entry>NO</entry>
+     </row>
+
+     <row>
+      <entry>Configuration file location:</entry>
+      <entry><filename>/etc/repmgr/10/repmgr.conf</filename></entry>
+     </row>
+
+     <row>
+      <entry>Data directory:</entry>
+      <entry><filename>/var/lib/pgsql/10/data</filename></entry>
+     </row>
+
+     <row>
+      <entry>repmgrd service command:</entry>
+      <entry><command>systemctl [start|stop|restart|reload] repmgr10</command></entry>
+     </row>
+
+     <row>
+      <entry>repmgrd service file location:</entry>
+      <entry><filename>/usr/lib/systemd/system/repmgr10.service</filename></entry>
+     </row>
+
+     <row>
+      <entry>repmgrd log file location:</entry>
+      <entry>(not specified by package; set in <filename>repmgr.conf</filename>)</entry>
+     </row>
+
+    </tbody>
+   </tgroup>
+  </table>
+
+  <table id="centos-6-packages">
+   <title>CentOS 6 packages</title>
+
+   <tgroup cols="2">
+    <tbody>
+
+     <row>
+      <entry>Package name example:</entry>
+      <entry><filename>repmgr96-4.0.4-1.rhel6.x86_64</filename></entry>
+     </row>
+
+     <row>
+      <entry>Metapackage:</entry>
+      <entry>(none)</entry>
+     </row>
+
+     <row>
+      <entry>Installation command:</entry>
+      <entry><literal>yum install repmgr96</literal></entry>
+     </row>
+
+     <row>
+      <entry>Binary location:</entry>
+      <entry><filename>/usr/pgsql-9.6/bin</filename></entry>
+     </row>
+
+     <row>
+      <entry>repmgr in default path:</entry>
+      <entry>NO</entry>
+     </row>
+
+     <row>
+      <entry>Configuration file location:</entry>
+      <entry><filename>/etc/repmgr/9.6/repmgr.conf</filename></entry>
+     </row>
+
+     <row>
+      <entry>Data directory:</entry>
+      <entry><filename>/var/lib/pgsql/9.6/data</filename></entry>
+     </row>
+
+     <row>
+      <entry>repmgrd service command:</entry>
+      <entry><literal>service [start|stop|restart|reload] repmgr-9.6</literal></entry>
+     </row>
+
+     <row>
+      <entry>repmgrd service file location:</entry>
+      <entry><literal>/etc/init.d/repmgr-9.6</literal></entry>
+     </row>
+
+     <row>
+      <entry>repmgrd log file location:</entry>
+      <entry><filename>/var/log/repmgr/repmgrd-9.6.log</filename></entry>
+     </row>
+
+    </tbody>
+   </tgroup>
+  </table>
+
+    </sect2>
+ </sect1>
+
+
+
+
+  <sect1 id="packages-debian-ubuntu" xreflabel="Debian/Ubuntu packages">
+    <title>Debian/Ubuntu Packages</title>
+    <indexterm>
+      <primary>packages</primary>
+      <secondary>Debian/Ubuntu packages</secondary>
+    </indexterm>
+
+    <indexterm>
+      <primary>Debian/Ubuntu</primary>
+      <secondary>package information</secondary>
+    </indexterm>
+
+    <para>
+      &repmgr; <literal>.deb</literal> packages are provided via the
+      PostgreSQL Community APT repository, and are available for each community-supported
+      PostgreSQL version, currently supported Debian releases, and currently supported
+      Ubuntu LTS releases.
+    </para>
+
+    <sect2 id="packages-apt-repository">
+      <title>APT repository</title>
+
+      <para>
+        &repmgr; packages are available from the  PostgreSQL Community APT repository,
+        which is updated immediately after each &repmgr; release.
+      </para>
+
+
+      <table id="apt-2ndquadrant-repository">
+        <title>2ndQuadrant public repository</title>
+        <tgroup cols="2">
+          <tbody>
+            <row>
+              <entry>Repository URL:</entry>
+              <entry><ulink url="https://dl.2ndquadrant.com/">https://dl.2ndquadrant.com/</ulink></entry>
+            </row>
+            <row>
+              <entry>Repository documentation:</entry>
+              <entry><ulink url="https://repmgr.org/docs/current/installation-packages.html#INSTALLATION-PACKAGES-DEBIAN">https://repmgr.org/docs/current/installation-packages.html#INSTALLATION-PACKAGES-DEBIAN</ulink></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+
+
+      <table id="apt-repository">
+        <title>PostgreSQL Community APT repository (PGDG)</title>
+        <tgroup cols="2">
+          <tbody>
+            <row>
+              <entry>Repository URL:</entry>
+              <entry><ulink url="http://apt.postgresql.org/">http://apt.postgresql.org/</ulink></entry>
+            </row>
+            <row>
+              <entry>Repository documentation:</entry>
+              <entry><ulink url="https://wiki.postgresql.org/wiki/Apt">https://wiki.postgresql.org/wiki/Apt</ulink></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+    </sect2>
+
+   <sect2 id="packages-debian-details">
+      <title>Debian/Ubuntu package details</title>
+
+      <para>
+        The table below lists relevant information, paths, commands etc. for the &repmgr; packages on
+        Debian 9.x ("Stretch"). Substitute the appropriate PostgreSQL major
+        version number for your installation.
+      </para>
+      <para>
+        See also <xref linkend="repmgrd-configuration-debian-ubuntu"> for some specifics related
+        to configuring the <application>repmgrd</application> daemon.
+      </para>
+
+      <table id="debian-9-packages">
+        <title>Debian 9.x packages</title>
+
+        <tgroup cols="2">
+          <tbody>
+
+            <row>
+              <entry>Package name example:</entry>
+              <entry><filename>postgresql-10-repmgr</filename></entry>
+            </row>
+
+            <row>
+              <entry>Metapackage:</entry>
+              <entry><filename>repmgr-common</filename></entry>
+            </row>
+
+            <row>
+              <entry>Installation command:</entry>
+              <entry><literal>apt-get install postgresql-10-repmgr</literal></entry>
+            </row>
+
+            <row>
+              <entry>Binary location:</entry>
+              <entry><filename>/usr/lib/postgresql/10/bin</filename></entry>
+            </row>
+
+            <row>
+              <entry>repmgr in default path:</entry>
+              <entry>Yes (via wrapper script <filename>/usr/bin/repmgr</filename>)</entry>
+            </row>
+
+            <row>
+              <entry>Configuration file location:</entry>
+              <entry>(not set by package)</entry>
+            </row>
+
+            <row>
+              <entry>Data directory:</entry>
+              <entry><filename>/var/lib/postgresql/10/main</filename></entry>
+            </row>
+
+            <row>
+              <entry>PostgreSQL service command:</entry>
+              <entry><command>systemctl [start|stop|restart|reload] postgresql@10-main</command></entry>
+
+            </row>
+
+            <row>
+              <entry>repmgrd service command:</entry>
+              <entry><command>systemctl [start|stop|restart|reload] repmgrd</command></entry>
+            </row>
+
+            <row>
+              <entry>repmgrd service file location:</entry>
+              <entry><filename>/etc/init.d/repmgrd</filename> (defaults in: <filename>/etc/defaults/repmgrd</filename>)</entry>
+            </row>
+
+            <row>
+              <entry>repmgrd log file location:</entry>
+              <entry>(not specified by package; set in <filename>repmgr.conf</filename>)</entry>
+            </row>
+
+          </tbody>
+        </tgroup>
+      </table>
+      <note>
+        <para>
+          Instead of using the <application>systemd</application> service command directly,
+          it's recommended to execute <command>pg_ctlcluster</command> (as <literal>root</literal>,
+          either directly or via <command>sudo</command>), e.g.:
+          <programlisting>
+            <command>pg_ctlcluster 10 main [start|stop|restart|reload]</command></programlisting>
+        </para>
+        <para>
+          For pre-<application>systemd</application> systems, <command>pg_ctlcluster</command>
+          can be executed directly by the <literal>postgres</literal> user.
+        </para>
+      </note>
+   </sect2>
+
+  </sect1>
+
+  <sect1 id="packages-snapshot" xreflabel="Snapshot packages">
+    <title>Snapshot packages</title>
+    <indexterm>
+      <primary>snapshot packages</primary>
+    </indexterm>
+    <indexterm>
+      <primary>packages</primary>
+      <secondary>snaphots</secondary>
+    </indexterm>
+
+    <para>
+      For testing new features and bug fixes, from time to time 2ndQuadrant provides
+      so-called &quot;snapshot packages&quot; via its public repository. These packages
+      are built from the &repmgr; source at a particular point in time, and are not formal
+      releases.
+    </para>
+    <note>
+      <para>
+        We do not recommend installing these packages in a production environment
+        unless specifically advised.
+      </para>
+    </note>
+    <para>
+      To install a snapshot package, it's necessary to install the 2ndQuadrant public snapshot repository,
+      following the instructions here: <ulink url="https://dl.2ndquadrant.com/default/release/site/">https://dl.2ndquadrant.com/default/release/site/</ulink> but replace <literal>release</literal> with <literal>snapshot</literal>
+      in the appropriate URL.
+    </para>
+    <para>
+      For example, to install the snapshot RPM repository for PostgreSQL 9.6, execute (as <literal>root</literal>):
+      <programlisting>
+curl https://dl.2ndquadrant.com/default/snapshot/get/9.6/rpm | bash</programlisting>
+
+      or as a normal user with root sudo access:
+      <programlisting>
+curl https://dl.2ndquadrant.com/default/snapshot/get/9.6/rpm | sudo bash</programlisting>
+    </para>
+    <para>
+      Alternatively you can browse the repository here:
+      <ulink url="https://dl.2ndquadrant.com/default/snapshot/browse/">https://dl.2ndquadrant.com/default/snapshot/browse/</ulink>.
+    </para>
+    <para>
+      Once the repository is installed, installing or updating &repmgr; will result in the latest snapshot
+      package being installed.
+    </para>
+    <para>
+      The package name will be formatted like this:
+      <programlisting>
+repmgr96-4.1.1-0.0git320.g5113ab0.1.el7.x86_64.rpm</programlisting>
+      containg the snapshot build number (here: <literal>320</literal>) and the hash
+      of the <application>git</application> commit it was built from (here: <literal>g5113ab0</literal>).
+    </para>
+
+    <para>
+      Note that the next formal release (in the above example <literal>4.1.1</literal>), once available,
+      will install in place of any snapshot builds.
+    </para>
+
+  </sect1>
+
+  <sect1 id="packages-old-versions" xreflabel="Installing old package versions">
+    <title>Installing old package versions</title>
+
+    <indexterm>
+      <primary>old packages</primary>
+    </indexterm>
+
+    <indexterm>
+      <primary>packages</primary>
+      <secondary>old versions</secondary>
+    </indexterm>
+
+    <indexterm>
+      <primary>installation</primary>
+      <secondary>old package versions</secondary>
+    </indexterm>
+
+    <sect2 id="packages-old-versions-debian" xreflabel="old Debian package versions">
+      <title>Debian/Ubuntu</title>
+      <para>
+        An archive of old packages (<literal>3.3.2</literal> and later) for Debian/Ubuntu-based systems is available here:
+        <ulink url="http://atalia.postgresql.org/morgue/r/repmgr/">http://atalia.postgresql.org/morgue/r/repmgr/</ulink>
+      </para>
+    </sect2>
+
+    <sect2 id="packages-old-versions-rhel-centos" xreflabel="old RHEL/CentOS package versions">
+      <title>RHEL/CentOS</title>
+      <para>
+        Old RPM packages (<literal>3.2</literal> and later) can be retrieved from the
+        (deprecated) 2ndQuadrant repository at
+        <ulink url="http://packages.2ndquadrant.com/">http://packages.2ndquadrant.com/</ulink>
+        by installing the appropriate repository RPM:
+      </para>
+
+      <itemizedlist spacing="compact" mark="bullet">
+
+        <listitem>
+          <simpara>
+            <ulink url="http://packages.2ndquadrant.com/repmgr/yum-repo-rpms/repmgr-fedora-1.0-1.noarch.rpm">http://packages.2ndquadrant.com/repmgr/yum-repo-rpms/repmgr-fedora-1.0-1.noarch.rpm</ulink>
+          </simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            <ulink url="http://packages.2ndquadrant.com/repmgr/yum-repo-rpms/repmgr-rhel-1.0-1.noarch.rpm">http://packages.2ndquadrant.com/repmgr/yum-repo-rpms/repmgr-rhel-1.0-1.noarch.rpm</ulink>
+          </simpara>
+        </listitem>
+
+      </itemizedlist>
+
+      <para>
+        Old versions can be located with e.g.:
+        <programlisting>
+          yum --showduplicates list repmgr96</programlisting>
+        (substitute the appropriate package name; see <xref linkend="packages-centos">) and installed with:
+        <programlisting>
+          yum install {package_name}-{version}</programlisting>
+        where <literal>{package_name}</literal> is the base package name (e.g. <literal>repmgr96</literal>)
+        and <literal>{version}</literal> is the version listed by the
+        <command> yum --showduplicates list ...</command> command, e.g. <literal>4.0.6-1.rhel6</literal>.
+      </para>
+      <para>For example:
+        <programlisting>
+          yum install repmgr96-4.0.6-1.rhel6</programlisting>
+      </para>
+
+    </sect2>
+  </sect1>
+
+
+  <sect1 id="packages-packager-info" xreflabel="Information for packagers">
+    <title>Information for packagers</title>
+    <indexterm>
+      <primary>packages</primary>
+      <secondary>information for packagers</secondary>
+    </indexterm>
+    <para>
+      We recommend patching the following parameters when
+      building the package as built-in default values for user convenience.
+      These values can nevertheless be overridden by the user, if desired.
+    </para>
+    <itemizedlist>
+      <listitem>
+        <para>
+          Configuration file location: the default configuration file location
+          can be hard-coded by patching <varname>package_conf_file</varname>
+          in <filename>configfile.c</filename>:
+          <programlisting>
+		/* packagers: if feasible, patch configuration file path into "package_conf_file" */
+		char		package_conf_file[MAXPGPATH] = "";</programlisting>
+        </para>
+        <para>
+          See also: <xref linkend="configuration-file">
+        </para>
+      </listitem>
+
+      <listitem>
+        <para>
+          PID file location: the default <application>repmgrd</application> PID file
+          location can be hard-coded by patching <varname>package_pid_file</varname>
+          in <filename>repmgrd.c</filename>:
+          <programlisting>
+		/* packagers: if feasible, patch PID file path into "package_pid_file" */
+		char		package_pid_file[MAXPGPATH] = "";</programlisting>
+        </para>
+        <para>
+          See also: <xref linkend="repmgrd-pid-file">
+        </para>
+      </listitem>
+
+    </itemizedlist>
+  </sect1>
+</appendix>

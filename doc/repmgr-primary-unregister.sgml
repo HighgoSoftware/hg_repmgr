@@ -1,0 +1,74 @@
+<refentry id="repmgr-primary-unregister">
+  <indexterm>
+    <primary>repmgr primary unregister</primary>
+  </indexterm>
+  <refmeta>
+    <refentrytitle>repmgr primary unregister</refentrytitle>
+  </refmeta>
+  <refnamediv>
+    <refname>repmgr primary unregister</refname>
+    <refpurpose>unregister an inactive primary node</refpurpose>
+  </refnamediv>
+
+  <refsect1>
+    <title>Description</title>
+    <para>
+      <command>repmgr primary unregister</command> unregisters an inactive primary node
+      from the &repmgr; metadata. This is typically when the primary has failed and is
+      being removed from the cluster after a new primary has been promoted.
+    </para>
+  </refsect1>
+
+  <refsect1>
+    <title>Execution</title>
+    <para>
+      <command>repmgr primary unregister</command> can be run on any active &repmgr; node,
+      with the ID of the node to unregister passed as <option>--node-id</option>.
+    </para>
+    <para>
+      Execute with the <literal>--dry-run</literal> option to check what would happen without
+      actually unregistering the node.
+    </para>
+
+    <para>
+      <command>repmgr master unregister</command> can be used as an alias for
+      <command>repmgr primary unregister</command>.
+    </para>
+  </refsect1>
+
+  <refsect1>
+
+    <title>Options</title>
+
+    <variablelist>
+
+      <varlistentry>
+        <term><option>--dry-run</option></term>
+        <listitem>
+          <para>
+            Check prerequisites but don't actually unregister the primary.
+          </para>
+        </listitem>
+      </varlistentry>
+
+     <varlistentry>
+        <term><option>--node-id</option></term>
+        <listitem>
+          <para>
+            ID of the inactive primary to be unregistered.
+          </para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </refsect1>
+
+  <refsect1 id="repmgr-primary-unregister-events">
+    <title>Event notifications</title>
+    <para>
+      A <literal>primary_unregister</literal> <link linkend="event-notifications">event notification</link> will be generated.
+    </para>
+  </refsect1>
+
+</refentry>

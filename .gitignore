@@ -1,0 +1,57 @@
+# Global excludes across all subdirectories - copied from postgres
+*.o
+*.so
+*.so.[0-9]
+*.so.[0-9].[0-9]
+*.sl
+*.sl.[0-9]
+*.sl.[0-9].[0-9]
+*.dylib
+*.dll
+*.a
+*.mo
+*.pot
+objfiles.txt
+.deps/
+*.gcno
+*.gcda
+*.gcov
+*.gcov.out
+lcov.info
+coverage/
+*.vcproj
+*.vcxproj
+win32ver.rc
+*.exe
+lib*dll.def
+lib*.pc
+
+# autoconf output
+/autom4te.cache/
+
+# configure output
+/Makefile
+/Makefile.global
+/config.log
+/config.status
+/config.h
+/repmgr_version.h
+
+# test output
+/results/
+/regression.diffs
+/regression.out
+
+/doc/Makefile
+
+# other
+/.lineno
+*.dSYM
+*.orig
+*.rej
+
+# generated binaries
+repmgr
+repmgrd
+repmgr4
+repmgrd4

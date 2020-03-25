@@ -1,0 +1,386 @@
+<chapter id="repmgrd-operation" xreflabel="repmgrd operation">
+  <indexterm>
+    <primary>repmgrd</primary>
+    <secondary>operation</secondary>
+  </indexterm>
+
+  <title>repmgrd operation</title>
+
+
+  <sect1 id="repmgrd-pausing">
+
+  <indexterm>
+    <primary>repmgrd</primary>
+    <secondary>pausing</secondary>
+  </indexterm>
+
+  <indexterm>
+    <primary>pausing repmgrd</primary>
+  </indexterm>
+
+  <title>Pausing repmgrd</title>
+
+  <para>
+    In normal operation, <application>repmgrd</application> monitors the state of the
+    PostgreSQL node it is running on, and will take appropriate action if problems
+    are detected, e.g. (if so configured) promote the node to primary, if the existing
+    primary has been determined as failed.
+  </para>
+
+  <para>
+    However, <application>repmgrd</application> is unable to distinguish between
+    planned outages (such as performing a <link linkend="performing-switchover">switchover</link>
+    or installing PostgreSQL maintenance released), and an actual server outage. In versions prior to
+    &repmgr; 4.2 it was necessary to stop <application>repmgrd</application> on all nodes (or at least
+    on all nodes where <application>repmgrd</application> is
+    <link linkend="repmgrd-automatic-failover">configured for automatic failover</link>)
+    to prevent <application>repmgrd</application> from making unintentional changes to the
+    replication cluster.
+  </para>
+
+  <para>
+    From <link linkend="release-4.2">&repmgr; 4.2</link>, <application>repmgrd</application>
+    can now be &quot;paused&quot;, i.e. instructed not to take any action such as performing a failover.
+    This can be done from any node in the cluster, removing the need to stop/restart
+    each <application>repmgrd</application> individually.
+  </para>
+
+  <note>
+    <para>
+      For major PostgreSQL upgrades, e.g. from PostgreSQL 10 to PostgreSQL 11,
+      <application>repmgrd</application> should be shut down completely and only started up
+      once the &repmgr; packages for the new PostgreSQL major version have been installed.
+    </para>
+  </note>
+
+  <sect2 id="repmgrd-pausing-prerequisites">
+    <title>Prerequisites for pausing <application>repmgrd</application></title>
+    <para>
+      In order to be able to pause/unpause <application>repmgrd</application>, following
+      prerequisites must be met:
+      <itemizedlist spacing="compact" mark="bullet">
+
+        <listitem>
+          <simpara><link linkend="release-4.2">&repmgr; 4.2</link> or later must be installed on all nodes.</simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>The same major &repmgr; version (e.g. 4.2) must be installed on all nodes (and preferably the same minor version).</simpara>
+        </listitem>
+
+        <listitem>
+          <simpara>
+            PostgreSQL on all nodes must be accessible from the node where the
+            <literal>pause</literal>/<literal>unpause</literal> operation is executed, using the
+            <varname>conninfo</varname> string shown by <link linkend="repmgr-cluster-show"><command>repmgr cluster show</command></link>.
+          </simpara>
+        </listitem>
+      </itemizedlist>
+    </para>
+    <note>
+      <para>
+        These conditions are required for normal &repmgr; operation in any case.
+      </para>
+    </note>
+
+  </sect2>
+
+  <sect2 id="repmgrd-pausing-execution">
+    <title>Pausing/unpausing <application>repmgrd</application></title>
+    <para>
+      To pause <application>repmgrd</application>, execute <link linkend="repmgr-daemon-pause"><command>repmgr daemon pause</command></link>, e.g.:
+   <programlisting>
+$ repmgr -f /etc/repmgr.conf daemon pause
+NOTICE: node 1 (node1) paused
+NOTICE: node 2 (node2) paused
+NOTICE: node 3 (node3) paused</programlisting>
+    </para>
+    <para>
+      The state of <application>repmgrd</application> on each node can be checked with
+      <link linkend="repmgr-daemon-status"><command>repmgr daemon status</command></link>, e.g.:
+    <programlisting>$ repmgr -f /etc/repmgr.conf daemon status
+ ID | Name  | Role    | Status  | repmgrd | PID  | Paused?
+----+-------+---------+---------+---------+------+---------
+ 1  | node1 | primary | running | running | 7851 | yes
+ 2  | node2 | standby | running | running | 7889 | yes
+ 3  | node3 | standby | running | running | 7918 | yes</programlisting>
+    </para>
+
+    <note>
+      <para>
+        If executing a switchover with  <link linkend="repmgr-standby-switchover"><command>repmgr standby switchover</command></link>,
+		&repmgr; will automatically pause/unpause <application>repmgrd</application> as part of the switchover process.
+      </para>
+    </note>
+
+    <para>
+      If the primary (in this example, <literal>node1</literal>) is stopped, <application>repmgrd</application>
+      running on one of the standbys (here: <literal>node2</literal>) will react like this:
+      <programlisting>
+[2018-09-20 12:22:21] [WARNING] unable to connect to upstream node "node1" (node ID: 1)
+[2018-09-20 12:22:21] [INFO] checking state of node 1, 1 of 5 attempts
+[2018-09-20 12:22:21] [INFO] sleeping 1 seconds until next reconnection attempt
+...
+[2018-09-20 12:22:24] [INFO] sleeping 1 seconds until next reconnection attempt
+[2018-09-20 12:22:25] [INFO] checking state of node 1, 5 of 5 attempts
+[2018-09-20 12:22:25] [WARNING] unable to reconnect to node 1 after 5 attempts
+[2018-09-20 12:22:25] [NOTICE] node is paused
+[2018-09-20 12:22:33] [INFO] node "node2" (node ID: 2) monitoring upstream node "node1" (node ID: 1) in degraded state
+[2018-09-20 12:22:33] [DETAIL] repmgrd paused by administrator
+[2018-09-20 12:22:33] [HINT] execute "repmgr daemon unpause" to resume normal failover mode</programlisting>
+    </para>
+    <para>
+      If the primary becomes available again (e.g. following a software upgrade), <application>repmgrd</application>
+      will automatically reconnect, e.g.:
+      <programlisting>
+[2018-09-20 13:12:41] [NOTICE] reconnected to upstream node 1 after 8 seconds, resuming monitoring</programlisting>
+    </para>
+
+    <para>
+      To unpause <application>repmgrd</application>, execute <link linkend="repmgr-daemon-unpause"><command>repmgr daemon unpause</command></link>, e.g.:
+   <programlisting>
+$ repmgr -f /etc/repmgr.conf daemon unpause
+NOTICE: node 1 (node1) unpaused
+NOTICE: node 2 (node2) unpaused
+NOTICE: node 3 (node3) unpaused</programlisting>
+    </para>
+
+    <note>
+      <para>
+        If the previous primary is no longer accessible when <application>repmgrd</application>
+        is unpaused, no failover action will be taken. Instead, a new primary must be manually promoted using
+        <link linkend="repmgr-standby-promote"><command>repmgr standby promote</command></link>,
+		and any standbys attached to the new primary with
+		<link linkend="repmgr-standby-follow"><command>repmgr standby follow</command></link>.
+      </para>
+      <para>
+        This is to prevent <link linkend="repmgr-daemon-unpause"><command>repmgr daemon unpause</command></link>
+        resulting in the automatic promotion of a new primary, which may be a problem particularly
+        in larger clusters, where <application>repmgrd</application> could select a different promotion
+        candidate to the one intended by the administrator.
+      </para>
+    </note>
+  </sect2>
+  <sect2 id="repmgrd-pausing-details">
+    <title>Details on the <application>repmgrd</application> pausing mechanism</title>
+
+    <para>
+      The pause state of each node will be stored over a PostgreSQL restart.
+    </para>
+
+	<para>
+	  <link linkend="repmgr-daemon-pause"><command>repmgr daemon pause</command></link> and
+	  <link linkend="repmgr-daemon-unpause"><command>repmgr daemon unpause</command></link> can be
+	  executed even if <application>repmgrd</application> is not running; in this case,
+	  <application>repmgrd</application> will start up in whichever pause state has been set.
+	</para>
+    <note>
+      <para>
+		<link linkend="repmgr-daemon-pause"><command>repmgr daemon pause</command></link> and
+		<link linkend="repmgr-daemon-unpause"><command>repmgr daemon unpause</command></link>
+		<emphasis>do not</emphasis> stop/start <application>repmgrd</application>.
+      </para>
+    </note>
+  </sect2>
+  </sect1>
+
+  <sect1 id="repmgrd-wal-replay-pause">
+    <indexterm>
+      <primary>repmgrd</primary>
+      <secondary>paused WAL replay</secondary>
+    </indexterm>
+
+    <title>repmgrd and paused WAL replay</title>
+    <para>
+      If WAL replay has been paused (using <command>pg_wal_replay_pause()</command>,
+      on PostgreSQL 9.6 and earlier <command>pg_xlog_replay_pause()</command>),
+      in a failover situation <application>repmgrd</application> will
+      automatically resume WAL replay.
+    </para>
+    <para>
+      This is because if WAL replay is paused, but WAL is pending replay,
+      PostgreSQL cannot be promoted until WAL replay is resumed.
+    </para>
+    <note>
+      <para>
+        <command><link linkend="repmgr-standby-promote">repmgr standby promote</link></command>
+        will refuse to promote a node in this state, as the PostgreSQL
+        <command>promote</command> command will not be acted on until
+        WAL replay is resumed, leaving the cluster in a potentially
+        unstable state. In this case it is up to the user to
+        decide whether to resume WAL replay.
+      </para>
+    </note>
+  </sect1>
+
+<sect1 id="repmgrd-degraded-monitoring" xreflabel="repmgrd degraded monitoring">
+ <indexterm>
+   <primary>repmgrd</primary>
+   <secondary>degraded monitoring</secondary>
+ </indexterm>
+
+ <indexterm>
+   <primary>degraded monitoring</primary>
+ </indexterm>
+
+ <title>"degraded monitoring" mode</title>
+ <para>
+  In certain circumstances, <application>repmgrd</application> is not able to fulfill its primary mission
+  of monitoring the node's upstream server. In these cases it enters &quot;degraded monitoring&quot;
+  mode, where <application>repmgrd</application> remains active but is waiting for the situation
+  to be resolved.
+ </para>
+ <para>
+  Situations where this happens are:
+  <itemizedlist spacing="compact" mark="bullet">
+
+   <listitem>
+    <simpara>a failover situation has occurred, no nodes in the primary node's location are visible</simpara>
+   </listitem>
+
+   <listitem>
+    <simpara>a failover situation has occurred, but no promotion candidate is available</simpara>
+   </listitem>
+
+   <listitem>
+    <simpara>a failover situation has occurred, but the promotion candidate could not be promoted</simpara>
+   </listitem>
+
+   <listitem>
+    <simpara>a failover situation has occurred, but the node was unable to follow the new primary</simpara>
+   </listitem>
+
+   <listitem>
+    <simpara>a failover situation has occurred, but no primary has become available</simpara>
+   </listitem>
+
+   <listitem>
+    <simpara>a failover situation has occurred, but automatic failover is not enabled for the node</simpara>
+   </listitem>
+
+   <listitem>
+    <simpara>repmgrd is monitoring the primary node, but it is not available (and no other node has been promoted as primary)</simpara>
+   </listitem>
+  </itemizedlist>
+ </para>
+
+ <para>
+  Example output in a situation where there is only one standby with <literal>failover=manual</literal>,
+  and the primary node is unavailable (but is later restarted):
+  <programlisting>
+    [2017-08-29 10:59:19] [INFO] node "node2" (node ID: 2) monitoring upstream node "node1" (node ID: 1) in normal state (automatic failover disabled)
+    [2017-08-29 10:59:33] [WARNING] unable to connect to upstream node "node1" (node ID: 1)
+    [2017-08-29 10:59:33] [INFO] checking state of node 1, 1 of 5 attempts
+    [2017-08-29 10:59:33] [INFO] sleeping 1 seconds until next reconnection attempt
+    (...)
+    [2017-08-29 10:59:37] [INFO] checking state of node 1, 5 of 5 attempts
+    [2017-08-29 10:59:37] [WARNING] unable to reconnect to node 1 after 5 attempts
+    [2017-08-29 10:59:37] [NOTICE] this node is not configured for automatic failover so will not be considered as promotion candidate
+    [2017-08-29 10:59:37] [NOTICE] no other nodes are available as promotion candidate
+    [2017-08-29 10:59:37] [HINT] use "repmgr standby promote" to manually promote this node
+    [2017-08-29 10:59:37] [INFO] node "node2" (node ID: 2) monitoring upstream node "node1" (node ID: 1) in degraded state (automatic failover disabled)
+    [2017-08-29 10:59:53] [INFO] node "node2" (node ID: 2) monitoring upstream node "node1" (node ID: 1) in degraded state (automatic failover disabled)
+    [2017-08-29 11:00:45] [NOTICE] reconnected to upstream node 1 after 68 seconds, resuming monitoring
+    [2017-08-29 11:00:57] [INFO] node "node2" (node ID: 2) monitoring upstream node "node1" (node ID: 1) in normal state (automatic failover disabled)</programlisting>
+
+ </para>
+ <para>
+  By default, <literal>repmgrd</literal> will continue in degraded monitoring mode indefinitely.
+  However a timeout (in seconds) can be set with <varname>degraded_monitoring_timeout</varname>,
+  after which <application>repmgrd</application> will terminate.
+ </para>
+
+ <note>
+   <para>
+     If <application>repmgrd</application> is monitoring a primary mode which has been stopped
+     and manually restarted as a standby attached to a new primary, it will automatically detect
+     the status change and update the node record to reflect the node's new status
+     as an active standby. It will then resume monitoring the node as a standby.
+   </para>
+ </note>
+</sect1>
+
+
+<sect1 id="repmgrd-monitoring" xreflabel="Storing monitoring data">
+ <indexterm>
+   <primary>repmgrd</primary>
+   <secondary>monitoring</secondary>
+ </indexterm>
+ <indexterm>
+   <primary>monitoring</primary>
+   <secondary>with repmgrd</secondary>
+ </indexterm>
+
+ <title>Storing monitoring data</title>
+ <para>
+   When <application>repmgrd</application> is running with the option <literal>monitoring_history=true</literal>,
+  it will constantly write standby node status information to the
+  <varname>monitoring_history</varname> table, providing a near-real time
+  overview of replication status on all nodes
+  in the cluster.
+ </para>
+ <para>
+   The view <literal>replication_status</literal> shows the most recent state
+   for each node, e.g.:
+  <programlisting>
+    repmgr=# select * from repmgr.replication_status;
+    -[ RECORD 1 ]-------------+------------------------------
+    primary_node_id           | 1
+    standby_node_id           | 2
+    standby_name              | node2
+    node_type                 | standby
+    active                    | t
+    last_monitor_time         | 2017-08-24 16:28:41.260478+09
+    last_wal_primary_location | 0/6D57A00
+    last_wal_standby_location | 0/5000000
+    replication_lag           | 29 MB
+    replication_time_lag      | 00:00:11.736163
+    apply_lag                 | 15 MB
+    communication_time_lag    | 00:00:01.365643</programlisting>
+ </para>
+ <para>
+  The interval in which monitoring history is written is controlled by the
+  configuration parameter <varname>monitor_interval_secs</varname>;
+  default is 2.
+ </para>
+ <para>
+  As this can generate a large amount of monitoring data in the table
+  <literal>repmgr.monitoring_history</literal>. it's advisable to regularly
+  purge historical data using the <xref linkend="repmgr-cluster-cleanup">
+  command; use the <literal>-k/--keep-history</literal> option to
+  specify how many day's worth of data should be retained.
+ </para>
+ <para>
+  It's possible to use <application>repmgrd</application> to run in monitoring
+  mode only (without automatic failover capability) for some or all
+  nodes by setting <literal>failover=manual</literal> in the node's
+  <filename>repmgr.conf</filename> file. In the event of the node's upstream failing,
+  no failover action will be taken and the node will require manual intervention to
+  be reattached to replication. If this occurs, an
+  <link linkend="event-notifications">event notification</link>
+  <varname>standby_disconnect_manual</varname> will be created.
+ </para>
+ <para>
+  Note that when a standby node is not streaming directly from its upstream
+  node, e.g. recovering WAL from an archive, <varname>apply_lag</varname> will always appear as
+  <literal>0 bytes</literal>.
+ </para>
+ <tip>
+  <para>
+   If monitoring history is enabled, the contents of the <literal>repmgr.monitoring_history</literal>
+   table will be replicated to attached standbys. This means there will be a small but
+   constant stream of replication activity which may not be desirable. To prevent
+   this, convert the table to an <literal>UNLOGGED</literal> one with:
+   <programlisting>
+     ALTER TABLE repmgr.monitoring_history SET UNLOGGED;</programlisting>
+  </para>
+  <para>
+   This will however mean that monitoring history will not be available on
+   another node following a failover, and the view <literal>repmgr.replication_status</literal>
+   will not work on standbys.
+  </para>
+ </tip>
+</sect1>
+
+
+</chapter>

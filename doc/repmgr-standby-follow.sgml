@@ -1,0 +1,258 @@
+<refentry id="repmgr-standby-follow">
+  <indexterm>
+    <primary>repmgr standby follow</primary>
+  </indexterm>
+
+  <refmeta>
+    <refentrytitle>repmgr standby follow</refentrytitle>
+  </refmeta>
+
+  <refnamediv>
+    <refname>repmgr standby follow</refname>
+    <refpurpose>attach a running standby to a new upstream node</refpurpose>
+  </refnamediv>
+
+  <refsect1>
+    <title>Description</title>
+
+    <para>
+      Attaches the standby (&quot;follow candidate&quot;) to a new upstream node
+      (&quot;follow target&quot;). Typically this will be the primary, but this
+      command can also be used to attach the standby to another standby.
+    </para>
+    <para>
+      This command requires a valid
+      <filename>repmgr.conf</filename> file for the standby, either specified
+      explicitly with <literal>-f/--config-file</literal> or located in a
+      default location; no additional arguments are required.
+    </para>
+
+	<para>
+	  By default &repmgr; will attempt to attach the standby to the current primary.
+	  If <option>--upstream-node-id</option> is provided, &repmgr; will attempt
+	  to attach the standby to the specified node, which can be another standby.
+	</para>
+
+    <para>
+      This command will force a restart of the standby server, which must be
+      running.
+    </para>
+
+	<tip>
+      <para>
+		To re-add an inactive node to the replication cluster, use
+		<xref linkend="repmgr-node-rejoin">.
+      </para>
+	</tip>
+
+	<para>
+	  <command>repmgr standby follow</command> will wait up to
+	  <varname>standby_follow_timeout</varname> seconds (default: <literal>30</literal>)
+	  to verify the standby has actually connected to the new upstream node.
+	</para>
+
+	<note>
+	  <para>
+	    If <option>recovery_min_apply_delay</option> is set for the standby, it
+	    will not attach to the new upstream node until it has replayed available
+	    WAL.
+	  </para>
+	  <para>
+	    Conversely, if the standby is attached to an upstream standby
+	    which has <option>recovery_min_apply_delay</option> set, the upstream
+            standby's replay state may actually be behind that of its new downstream node.
+	  </para>
+	</note>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Example</title>
+    <para>
+      <programlisting>
+      $ repmgr -f /etc/repmgr.conf standby follow
+      INFO: setting node 3's primary to node 2
+      NOTICE: restarting server using "pg_ctl -l /var/log/postgres/startup.log -w -D '/var/lib/postgres/data' restart"
+      waiting for server to shut down........ done
+      server stopped
+      waiting for server to start.... done
+      server started
+      NOTICE: STANDBY FOLLOW successful
+      DETAIL: node 3 is now attached to node 2</programlisting>
+    </para>
+  </refsect1>
+
+  <refsect1>
+    <title>Options</title>
+    <variablelist>
+
+      <varlistentry>
+        <term><option>--dry-run</option></term>
+        <listitem>
+          <para>
+            Check prerequisites but don't actually follow a new upstream node.
+          </para>
+          <para>
+            This will also verify whether the standby is capable of following the new upstream node.
+          </para>
+          <important>
+            <para>
+              If a standby was turned into a primary by removing <filename>recovery.conf</filename>
+              (<application>PostgreSQL 12</application> and later: <filename>standby.signal</filename>),
+              &repmgr; will <emphasis>not</emphasis> be able to determine whether that primary's timeline
+              has diverged from the timeline of the standby (&quot;follow candidate&quot;).
+            </para>
+            <para>
+              We recommend always to use <link linkend="repmgr-standby-promote"><command>repmgr standby promote</command></link>
+              to promote a standby to primary, as this will ensure that the new primary
+              will perform a timeline switch (making it practical to check for timeline divergence)
+              and also that &repmgr; metadata is updated correctly.
+            </para>
+          </important>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--upstream-node-id</option></term>
+        <listitem>
+          <para>
+            Node ID of the new upstream node (&quot;follow target&quot;).
+          </para>
+          <para>
+            If not provided, &repmgr; will attempt to follow the current primary node.
+          </para>
+          <para>
+            Note that when using <application>repmgrd</application>, <option>--upstream-node-id</option>
+            should always be configured;
+			see <link linkend="repmgrd-automatic-failover-configuration">Automatic failover configuration</link>
+            for details.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-w</option></term>
+        <term><option>--wait</option></term>
+        <listitem>
+          <para>
+            Wait for a primary to appear. &repmgr; will wait for up to
+            <varname>primary_follow_timeout</varname> seconds
+            (default: 60 seconds) to verify that the standby is following the new primary.
+            This value can be defined in <filename>repmgr.conf</filename>.
+          </para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>Execution</title>
+
+    <para>
+      Execute with the <literal>--dry-run</literal> option to test the follow operation as
+      far as possible, without actually changing the status of the node.
+    </para>
+
+    <para>
+      Note that &repmgr; will first attempt to determine whether the standby
+      (&quot;follow candidate&quot;) is capable of following the
+      new upstream node (&quot;follow target&quot;).
+    </para>
+    <para>
+      If, for example, the new upstream node has diverged from this node's timeline,
+      for example if the new upstream node was promoted to primary while this node
+      was still attached to the original primary, it will <emphasis>not</emphasis>
+      be possible to follow the new upstream node, and &repmgr; will emit an error
+      message like this:
+      <programlisting>
+ERROR: this node cannot attach to follow target node 3
+DETAIL: follow target server's timeline 2 forked off current database system timeline 1 before current recovery point 0/6108880</programlisting>
+    </para>
+    <para>
+      In this case, it may be possible to have this node follow the new upstream
+      using <command><link linkend="repmgr-node-rejoin">repmgr node rejoin</link></command>
+      with the <option>--force-rewind</option> to execute <command>pg_rewind</command>.
+      This does mean that transactions which exist on this node, but not the new upstream,
+      will be lost.
+    </para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Exit codes</title>
+    <para>
+      One of the following exit codes will be emitted by <command>repmgr standby follow</command>:
+    </para>
+    <variablelist>
+
+      <varlistentry>
+        <term><option>SUCCESS (0)</option></term>
+        <listitem>
+          <para>
+            The follow operation succeeded; or if <option>--dry-run</option> was provided,
+            no issues were detected which would prevent the follow operation.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_BAD_CONFIG (1)</option></term>
+        <listitem>
+          <para>
+            A configuration issue was detected which prevented &repmgr; from
+            continuing with the follow operation.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_NO_RESTART (4)</option></term>
+        <listitem>
+          <para>
+            The node could not be restarted.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_DB_CONN (6)</option></term>
+        <listitem>
+          <para>
+            &repmgr; was unable to establish a database connection to one of the nodes.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>ERR_FOLLOW_FAIL (23)</option></term>
+        <listitem>
+          <para>
+            &repmgr; was unable to complete the follow command.
+          </para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+
+  </refsect1>
+
+  <refsect1 id="repmgr-standby-follow-events">
+    <title>Event notifications</title>
+    <para>
+      A <literal>standby_follow</literal> <link linkend="event-notifications">event notification</link> will be generated.
+    </para>
+    <para>
+      If provided, &repmgr; will substitute the placeholders <literal>%p</literal> with the node ID of the node
+      being followed, <literal>%c</literal> with its <literal>conninfo</literal> string, and
+      <literal>%a</literal> with its node name.
+    </para>
+  </refsect1>
+
+  <refsect1>
+    <title>See also</title>
+    <para>
+     <xref linkend="repmgr-node-rejoin">
+    </para>
+  </refsect1>
+</refentry>
