@@ -1,6 +1,6 @@
 /*
  * repmgr-client.h
- * Copyright (c) 2ndQuadrant, 2010-2019
+ * Copyright (c) 2009-2020, HighGo Software Co.,Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #ifndef _REPMGR_CLIENT_H_

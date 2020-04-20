@@ -1,37 +1,32 @@
-repmgr: Replication Manager for PostgreSQL
+hg_repmgr: Replication Manager for HighGo Database
 ==========================================
 
-`repmgr` is a suite of open-source tools to manage replication and failover
-within a cluster of PostgreSQL servers. It enhances PostgreSQL's built-in
+`hg_repmgr` is a suite of open-source tools to manage replication and failover
+within a cluster of HighGo Database servers. It enhances HighGo Database's built-in
 replication capabilities with utilities to set up standby servers, monitor
 replication, and perform administrative tasks such as failover or switchover
 operations.
 
-`repmgr 4` is a complete rewrite of the existing `repmgr` codebase, allowing
-the use of all of the latest features in PostgreSQL replication.
+`hg_repmgr` is a complete rewrite of the existing `repmgr` codebase, allowing
+the use of all of the latest features in HighGo Database replication.
 
-PostgreSQL 11, 10, 9.6 and 9.5 are fully supported.
-PostgreSQL 9.4 and 9.3 are supported, with some restrictions.
-
-`repmgr` is distributed under the GNU GPL 3 and maintained by 2ndQuadrant.
+`hg_repmgr` is distributed under the GNU GPL 3 and maintained by 2ndQuadrant.
 
 ### BDR support
 
-`repmgr 4` supports monitoring of a two-node BDR 2.0 cluster on PostgreSQL 9.6
+`hg_repmgr` supports monitoring of a two-node BDR 2.0 cluster on HighGo Database 4.5
 only. Note that BDR 2.0 is not publicly available; please contact 2ndQuadrant
 for details.
 
+### Highgo changing
+HighGo Software Co.,Ltd. made changes against repmgr, to support some special features
 
 Documentation
 -------------
 
-The main `repmgr` documentation is available here:
+The main `hg_repmgr` documentation is available here:
 
-> [repmgr 4 documentation](https://repmgr.org/docs/4.2/index.html)
-
-The `README` file for `repmgr` 3.x is available here:
-
-> https://github.com/2ndQuadrant/repmgr/blob/REL3_3_STABLE/README.md
+> [hg_repmgr documentation](https://repmgr.org/docs/4.2/index.html)
 
 
 Files

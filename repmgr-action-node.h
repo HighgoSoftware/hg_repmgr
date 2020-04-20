@@ -1,6 +1,6 @@
 /*
  * repmgr-action-node.h
- * Copyright (c) 2ndQuadrant, 2010-2019
+ * Copyright (c) 2009-2020, HighGo Software Co.,Ltd.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,12 +21,9 @@
 
 extern void do_node_status(void);
 extern void do_node_check(void);
-
 extern void do_node_rejoin(void);
 extern void do_node_service(void);
 extern void do_node_control(void);
-extern void do_node_startup(void); /* highgo added */
-
 extern void do_node_help(void);
 
 #endif							/* _REPMGR_ACTION_NODE_H_ */

@@ -1,7 +1,7 @@
 /*
  * repmgr-client.c - Command interpreter for the repmgr package
  *
- * Copyright (c) 2ndQuadrant, 2010-2019
+ * Copyright (c) 2009-2020, HighGo Software Co.,Ltd.
  *
  * This module is a command-line utility to easily setup a cluster of
  * hot standby servers for an HA environment
@@ -51,6 +51,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
 
 #include <unistd.h>
